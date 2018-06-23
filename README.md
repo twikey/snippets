@@ -65,7 +65,7 @@ SoapUI is a free and open source cross-platform Functional Testing solution.
 * Choose the Twikey SoapUI project
 * Select the 'Twikey API' project in SoapUI
 * Choose 'Custom Properties' in the Properties section
-* set 'host' to '[https://api(.beta).Twikey.com](https://api\(.beta\).twikey.com)'
+* set 'host' to '[https://api.Twikey.com](https://api.twikey.com)'
 * set 'salt', 'private_key', 'token' to match your ERP product and credentials
 * Test Authentication
 * Double click the 'Login' test case
