@@ -1,11 +1,10 @@
 <?php
     include_once "common.php";
 
-    $data = new StdClass();
-    foreach($_GET as $key => $value)
-    {
-       $data->{$key} = $value;
-    }
+    $data = array(
+        "mndtId" => "MndtRef",
+        "rsn" => "Some reason",
+    );
 
     $cancel = $twikey->cancelMandate($data);
     var_dump($cancel);
