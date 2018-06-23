@@ -1,0 +1,914 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:soapui-project activeEnvironment="Default" name="Twikey Local API" resourceRoot="" soapui-version="4.5.2"
+                    abortOnError="false" runType="SEQUENTIAL"
+                    xmlns:con="http://eviware.com/soapui/config">
+    <con:settings/>
+    <con:testSuite name="API" id="19e02836-726a-4eac-b5bb-5e3fdcd89086">
+        <con:settings/>
+        <con:runType>SEQUENTIAL</con:runType>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Login"
+                      searchProperties="true" id="07e83635-8841-4633-ae08-8d145e99cf08">
+            <con:settings/>
+            <con:testStep type="groovy" name="calculate OTP" id="8a7e4531-9092-40b6-a363-3c438da14a1c">
+                <con:settings/>
+                <con:config>
+                    <script><![CDATA[
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
+
+def salt = context.expand('${#Project#salt}').getBytes() as byte[];
+
+def private_key = DatatypeConverter.parseHexBinary(context.expand('${#Project#private_key}')) as byte[];
+
+def key = new byte[salt.length + private_key.length] as byte[];
+System.arraycopy(salt, 0, key, 0, salt.length);
+System.arraycopy(private_key, 0, key, salt.length, private_key.length);
+
+def counter = (long)Math.floor(System.currentTimeMillis() / 30000)
+
+Mac mac = Mac.getInstance("HmacSHA256");
+mac.init(new SecretKeySpec(key, "SHA256"));
+
+// get the bytes from the int
+byte[] counterAsBytes = new byte[8];
+for (int i = 7; i >= 0; --i) {
+	counterAsBytes[i] = (byte) (counter & 255);
+     counter = counter >> 8;
+}
+
+byte[] hash = mac.doFinal(counterAsBytes);
+int offset = hash[19] & 0xf;
+long v = (hash[offset] & 0x7f) << 24 |
+	(hash[offset + 1] & 0xff) << 16 |
+     (hash[offset + 2] & 0xff) << 8 |
+     (hash[offset + 3] & 0xff);
+// last 8 digits are important
+	testRunner.testCase.setPropertyValue( "OTP", Long.toString(v % 100000000) )
+]]></script>
+                </con:config>
+            </con:testStep>
+            <con:testStep type="httprequest" name="login" id="74e3e7ca-acfb-4747-bc82-ee36ff73e3e7">
+                <con:settings/>
+                <con:config method="POST" xsi:type="con:HttpRequest" name="login" postQueryString="false"
+                            mediaType="application/x-www-form-urlencoded"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">
+                            &lt;entry key="Accepts" value="application/json" xmlns="http://eviware.com/soapui/config"/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor</con:endpoint>
+                    <con:request/>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>apiToken</con:name>
+                            <con:value>${#Project#token}</con:value>
+                            <con:style>QUERY</con:style>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>otp</con:name>
+                            <con:value>${#TestCase#OTP}</con:value>
+                            <con:style>QUERY</con:style>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:testStep type="transfer" name="Transfer loginToken" id="b68ee6f9-c080-4118-b052-42f75bc7fff6">
+                <con:settings/>
+                <con:config xsi:type="con:PropertyTransfersStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:transfers setNullOnMissingSource="true" transferTextContent="true" failOnError="true"
+                                   ignoreEmpty="false" transferToAll="false" useXQuery="false" entitize="false"
+                                   transferChildNodes="false">
+                        <con:name>loginToken</con:name>
+                        <con:sourceType>ResponseAsXml</con:sourceType>
+                        <con:sourceStep>login</con:sourceStep>
+                        <con:sourcePath>declare namespace ns1='${#Project#host}/creditor';
+                            //ns1:Response/ns1:Authorization
+                        </con:sourcePath>
+                        <con:targetType>loginToken</con:targetType>
+                        <con:targetStep>#Project#</con:targetStep>
+                    </con:transfers>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>OTP</con:name>
+                    <con:value>36732274</con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0"
+                      name="List mandates - JSON" searchProperties="true"
+                      id="ea2e9ca1-0a66-475b-a48e-2b443723e97b">
+            <con:settings/>
+            <con:testStep type="httprequest" name="mandate JSON">
+                <con:settings/>
+                <con:config method="GET" xsi:type="con:HttpRequest" name="mandate JSON"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/mandate</con:endpoint>
+                    <con:request/>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>chunkSize</con:name>
+                            <con:value>100</con:value>
+                            <con:style>QUERY</con:style>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>loginToken</con:name>
+                    <con:value xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                        4ceb6333-1af9-46d9-a488-c6469103ff44
+                    </con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0"
+                      name="List mandates - XML" searchProperties="true" id="b1af0a66-fa77-410c-bb6f-f73a1b717a43">
+            <con:settings/>
+            <con:testStep type="httprequest" name="mandate XML">
+                <con:settings/>
+                <con:config method="GET" xsi:type="con:HttpRequest" name="mandate XML"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/mandate</con:endpoint>
+                    <con:request/>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/xml</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>loginToken</con:name>
+                    <con:value>9bb74b33-6d1c-496b-a394-5e36522f267c</con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0"
+                      name="Upload mandates - XML" searchProperties="true" id="43ca8520-cbdb-4383-a786-b85f9cd5f8ac">
+            <con:settings/>
+            <con:testStep type="httprequest" name="mandate XML">
+                <con:settings/>
+                <con:config method="POST" xsi:type="con:HttpRequest" name="mandate XML" postQueryString="false"
+                            mediaType="application/xml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/mandate</con:endpoint>
+                    <con:request><![CDATA[<Updates>
+   <GrpHdr>
+      <CreDtTm>2013-08-15T07:12:07Z</CreDtTm>
+   </GrpHdr>
+   <MndtInitn>
+      <Mndt>
+         <MndtId>PM_8</MndtId>
+         <LclInstrm>CORE</LclInstrm>
+         <Ocrncs>
+            <SeqTp>RCUR</SeqTp>
+            <Frqcy>ADHO</Frqcy>
+            <Drtn>
+               <FrDt>2013-08-12</FrDt>
+               <ToDt/>
+            </Drtn>
+         </Ocrncs>
+         <MaxAmt Ccy="EUR">0</MaxAmt>
+         <CdtrSchmeId>unknown</CdtrSchmeId>
+         <Cdtr>
+            <Nm>Twikey</Nm>
+            <PstlAdr>
+               <AdrLine>street</AdrLine>
+               <PstCd>zip</PstCd>
+               <TwnNm>city</TwnNm>
+               <Ctry>be</Ctry>
+            </PstlAdr>
+            <Id>BE680123456789</Id>
+            <CtryOfRes>be</CtryOfRes>
+            <CtctDtls>
+               <EmailAdr>info@Twikey.com</EmailAdr>
+            </CtctDtls>
+         </Cdtr>
+         <Dbtr>
+            <Nm>Twikey</Nm>
+            <PstlAdr>
+               <AdrLine>street</AdrLine>
+               <PstCd>zip</PstCd>
+               <TwnNm>city</TwnNm>
+               <Ctry>be</Ctry>
+            </PstlAdr>
+            <Id>BE680123456789</Id>
+            <CtryOfRes>be</CtryOfRes>
+            <CtctDtls>
+               <EmailAdr>info@Twikey.com</EmailAdr>
+            </CtctDtls>
+         </Dbtr>
+         <DbtrAcct>BE15380051920030</DbtrAcct>
+         <DbtrAcctHash>BE15xxxxxxxx0030</DbtrAcctHash>
+         <DbtrAgt>
+            <FinInstnId>
+               <BICFI>BBRUBEBB</BICFI>
+               <Nm>ING BELGIUM NV/SA (FORMERLY BANK BRUSSELS LAMBERT SA), BRUSSELS</Nm>
+            </FinInstnId>
+         </DbtrAgt>
+         <RfrdDoc>123</RfrdDoc>
+         <SplmtryData>
+            <Entry>
+               <Key>TemplateId</Key>
+               <Value>1</Value>
+            </Entry>
+            <Entry>
+               <Key>bankContact</Key>
+               <Value>asdf</Value>
+            </Entry>
+            <Entry>
+               <Key>bankEmail</Key>
+               <Value>asdf</Value>
+            </Entry>
+            <Entry>
+               <Key>bankTel</Key>
+               <Value>asdf</Value>
+            </Entry>
+            <Entry>
+               <Key>creditorId</Key>
+               <Value>adsf</Value>
+            </Entry>
+         </SplmtryData>
+      </Mndt>
+   </MndtInitn>
+</Updates>]]></con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/xml</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>loginToken</con:name>
+                    <con:value>b5993fc2-7372-4671-bb25-d790f5be6fc1</con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0"
+                      name="Upload mandates - JSON" searchProperties="true" id="3b9dc746-46d4-43e1-a487-cd216ab329b5">
+            <con:settings/>
+            <con:testStep type="httprequest" name="mandate JSON">
+                <con:settings/>
+                <con:config method="POST" xsi:type="con:HttpRequest" name="mandate JSON" postQueryString="false"
+                            mediaType="application/xml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/mandate</con:endpoint>
+                    <con:request>{
+                        "GrpHdr": {"CreDtTm": "2013-08-16T22:20:50Z"},
+                        "Messages": [{"Mndt": {
+                        "MndtId": "PM_19",
+                        "LclInstrm": "CORE",
+                        "Ocrncs": {
+                        "SeqTp": "RCUR",
+                        "Frqcy": "ADHO",
+                        "Drtn": {
+                        "FrDt": "2013-08-16",
+                        "ToDt": null
+                        }
+                        },
+                        "MaxAmt": "0",
+                        "CdtrSchmeId": "unknown",
+                        "Cdtr": {
+                        "Nm": "Twikey",
+                        "PstlAdr": {
+                        "AdrLine": "street",
+                        "PstCd": "zip",
+                        "TwnNm": "city",
+                        "Ctry": "be"
+                        },
+                        "Id": "BE680123456789",
+                        "CtryOfRes": "be",
+                        "CtctDtls": {"EmailAdr": "info@Twikey.com"}
+                        },
+                        "Dbtr": {
+                        "Nm": "Twikey",
+                        "PstlAdr": {
+                        "AdrLine": "street",
+                        "PstCd": "zip",
+                        "TwnNm": "city",
+                        "Ctry": "be"
+                        },
+                        "Id": "BE680123456789",
+                        "CtryOfRes": "be",
+                        "CtctDtls": {"EmailAdr": "info@Twikey.com"}
+                        },
+                        "DbtrAcct": "BE15380051920030",
+                        "DbtrAcctHash": "BE15xxxxxxxx0030",
+                        "DbtrAgt": {"FinInstnId": {
+                        "BICFI": "BBRUBEBB",
+                        "Nm": "ING BELGIUM NV/SA (FORMERLY BANK BRUSSELS LAMBERT SA), BRUSSELS"
+                        }},
+                        "RfrdDoc": "123",
+                        "SplmtryData": [
+                        { "Key": "TemplateId", "Value": 1 },
+                        { "Key": "creditorId", "Value": "BE8937242923749" },
+                        { "Key": "bankContact", "Value": "Koen Serry" },
+                        { "Key": "bankEmail", "Value": "koen@twikey.com" },
+                        { "Key": "bankTel", "Value": "+32476562972" }
+                        ]
+                        }}]
+                        }
+                    </con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>since</con:name>
+                            <con:value>0</con:value>
+                            <con:style>QUERY</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>0</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>loginToken</con:name>
+                    <con:value>72a718fa-1e54-46ed-8a08-469ae7971de1</con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="PreNotify"
+                      searchProperties="true" id="d1e90b45-305e-445f-82da-cd0eaa9e123a">
+            <con:settings/>
+            <con:testStep type="httprequest" name="Prenotify">
+                <con:settings/>
+                <con:config method="POST" xsi:type="con:HttpRequest" name="Prenotify" postQueryString="false"
+                            mediaType="application/x-www-form-urlencoded"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/prenotification</con:endpoint>
+                    <con:request>mndtId=PM_1&amp;invoiceNo=1&amp;executionDate=2013-01-31&amp;amount=50&amp;invoiceUrl=http://www.koen.be</con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>since</con:name>
+                            <con:value>0</con:value>
+                            <con:style>QUERY</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>0</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>loginToken</con:name>
+                    <con:value>732fe80f-6708-4511-8cb5-a40fba7cc5bc</con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Shortener"
+                      searchProperties="true" id="a77b9af1-83bf-4266-b5d9-28fd35fa6cb2">
+            <con:settings/>
+            <con:testStep type="httprequest" name="Shorten">
+                <con:settings/>
+                <con:config method="POST" xsi:type="con:HttpRequest" name="Shorten" postQueryString="false"
+                            mediaType="application/x-www-form-urlencoded"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/shortener</con:endpoint>
+                    <con:request>
+                        url=https%3A%2F%2Fdime.beta.twikey.com%2Fcontracts%3Fct%3D190%26l%3Dnl%26country%3Dbe%26lastname%3DDime%26firstname%3DTest%26s%3DBC83FF31E68220A188B4EDBDB51D1FADBFFF21C447A74D73A4DA65227E30958B
+                    </con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>since</con:name>
+                            <con:value>0</con:value>
+                            <con:style>QUERY</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>0</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>loginToken</con:name>
+                    <con:value>a2951786-e421-468f-8454-dc366370406c</con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0"
+                      name="Campaign - XML" searchProperties="true">
+            <con:settings/>
+            <con:testStep type="httprequest" name="Campaign">
+                <con:settings/>
+                <con:config method="GET" xsi:type="con:HttpRequest" name="Campaign" postQueryString="false"
+                            mediaType="application/x-www-form-urlencoded"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/campaign</con:endpoint>
+                    <con:request>mndtId=PM_6</con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/xml</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties/>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0"
+                      name="Campaign - JSON" searchProperties="true">
+            <con:settings/>
+            <con:testStep type="httprequest" name="Campaign">
+                <con:settings/>
+                <con:config method="GET" xsi:type="con:HttpRequest" name="Campaign" postQueryString="false"
+                            mediaType="application/x-www-form-urlencoded"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/campaign</con:endpoint>
+                    <con:request>mndtId=PM_6</con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties/>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0"
+                      name="PdfRetrieval" searchProperties="true" id="a1e7fc82-27e2-4eac-8810-6bf249078ec8">
+            <con:settings/>
+            <con:testStep type="httprequest" name="retrieve PDF">
+                <con:settings/>
+                <con:config method="GET" xsi:type="con:HttpRequest" name="retrieve PDF" postQueryString="false"
+                            mediaType="application/x-www-form-urlencoded"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/mandate/pdf</con:endpoint>
+                    <con:request>mndtId=PM_6</con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>since</con:name>
+                            <con:value>0</con:value>
+                            <con:style>QUERY</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>0</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>mndtId</con:name>
+                            <con:value>PM_5</con:value>
+                            <con:style>QUERY</con:style>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties/>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="PdfUpload"
+                      searchProperties="true">
+            <con:settings/>
+            <con:testStep type="httprequest" name="retrieve PDF">
+                <con:settings/>
+                <con:config method="POST" xsi:type="con:HttpRequest" name="retrieve PDF" postQueryString="false"
+                            mediaType="application/pdf" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/mandate/pdf</con:endpoint>
+                    <con:request/>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:attachment>
+                        <con:name>1348.pdf</con:name>
+                        <con:contentType>application/pdf</con:contentType>
+                        <con:contentId>1348.pdf</con:contentId>
+                        <con:url>/Volumes/Twikey/1348.pdf</con:url>
+                        <con:id>76478130-a8d1-474a-9b39-adb37bf6caa7</con:id>
+                    </con:attachment>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>mndtId</con:name>
+                            <con:value>B2B_3</con:value>
+                            <con:style>QUERY</con:style>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties/>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Cancel"
+                      searchProperties="true" id="821ec9d8-7693-479a-a5fb-50addda362a0">
+            <con:settings/>
+            <con:testStep type="httprequest" name="Cancel mandate">
+                <con:settings/>
+                <con:config method="DELETE" xsi:type="con:HttpRequest" name="Cancel mandate" postQueryString="false"
+                            mediaType="application/x-www-form-urlencoded"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor/mandate</con:endpoint>
+                    <con:request>mndtId=PM_6</con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>mndtId</con:name>
+                            <con:value>PM_6</con:value>
+                            <con:style>QUERY</con:style>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>reason</con:name>
+                            <con:value>Bad customer</con:value>
+                            <con:style>QUERY</con:style>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>loginToken</con:name>
+                    <con:value>3d13a752-dbaf-4588-983e-c0c8183445d5</con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Logout"
+                      searchProperties="true">
+            <con:settings/>
+            <con:testStep type="httprequest" name="Cancel mandate">
+                <con:settings/>
+                <con:config method="GET" xsi:type="con:HttpRequest" name="Cancel mandate" postQueryString="false"
+                            mediaType="application/x-www-form-urlencoded"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <con:settings>
+                        <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/>
+                        </con:setting>
+                    </con:settings>
+                    <con:endpoint>${#Project#host}/creditor</con:endpoint>
+                    <con:request>mndtId=PM_6</con:request>
+                    <con:credentials>
+                        <con:authType>Global HTTP Settings</con:authType>
+                    </con:credentials>
+                    <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+                    <con:jmsPropertyConfig/>
+                    <con:parameters>
+                        <con:parameter>
+                            <con:name>Accept</con:name>
+                            <con:value>application/json</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>application/json</con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                        <con:parameter>
+                            <con:name>Authorization</con:name>
+                            <con:value>${#Project#loginToken}</con:value>
+                            <con:style>HEADER</con:style>
+                            <con:type xmlns:xs="http://www.w3.org/2001/XMLSchema">xs:string</con:type>
+                            <con:default>
+                                FDGhBWI8uSnsu7xInUVSKF6cyno-DwPy3ArB-q9XY4dqq-2R-mlSnZqrIciQf88C1vSM9gmZlYFmqQK8_H9iX7ZxT4xUB_j0NCRajzjLpu4
+                            </con:default>
+                            <con:path xsi:nil="true"/>
+                            <con:description xsi:nil="true"/>
+                        </con:parameter>
+                    </con:parameters>
+                </con:config>
+            </con:testStep>
+            <con:properties>
+                <con:property>
+                    <con:name>loginToken</con:name>
+                    <con:value>3d13a752-dbaf-4588-983e-c0c8183445d5</con:value>
+                </con:property>
+            </con:properties>
+        </con:testCase>
+        <con:properties/>
+    </con:testSuite>
+    <con:properties>
+        <con:property>
+            <con:name>salt</con:name>
+            <con:value></con:value>
+        </con:property>
+        <con:property>
+            <con:name>private_key</con:name>
+            <con:value></con:value>
+        </con:property>
+        <con:property>
+            <con:name>token</con:name>
+            <con:value></con:value>
+        </con:property>
+        <con:property>
+            <con:name>host</con:name>
+            <con:value>https://api.twikey.com</con:value>
+        </con:property>
+        <con:property>
+            <con:name>loginToken</con:name>
+            <con:value></con:value>
+        </con:property>
+    </con:properties>
+    <con:wssContainer/>
+    <con:sensitiveInformation/>
+</con:soapui-project>

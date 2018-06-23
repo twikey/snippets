@@ -1,0 +1,1722 @@
+swagger: '2.0'
+info:
+  description: Twikey API
+  version: 1.0.0
+  title: Twikey API
+  contact:
+    name: "Twikey Support"
+    url: "https://www.twikey.com"
+    email: "support@twikey.com"
+host: api.twikey.com
+basePath: /
+tags:
+  - name: General
+  - name: Mandates
+    description: Mandate related endpoints
+  - name: Transactions
+    description: Transaction related endpoints
+  - name: Collections
+    description: Collection related endpoints
+  - name: Credit Transfer
+    description: Credit Transfer related endpoints
+  - name: Identification
+    description: Identity related endpoints
+produces:
+  - application/xml
+  - application/json
+schemes:
+  - https
+securityDefinitions:
+  session_key:
+    type: apiKey
+    name: Authorization
+    in: header
+    description:
+      Using the "API Token" to retrieve a session based "AuthorizationToken"
+paths:
+  /creditor:
+    post:
+      tags:
+        - General
+      summary: Login
+      description:
+        >
+        Requires an **API Token** which can be found in the Twikey Creditor Dashboard under Settings/Api Integration.
+
+        When using the API the login call will provide you with an AuthorizationToken, which is to be send upon every subsequent call (via the authorization header) in order to use the api.
+        This AuthorizationToken acts as a session token and has a validity of 24h.
+
+        If the creditor opted for enhanced security, the private key allows the generation of a Time-based One-time password.
+        See <a href="/r/admin/doc/api#appendix-c-calculation-of-the-otp-by-the-swp">Appendix C of the Creditor API documentation</a> for a more detailed explanation or sample code on how to calculate this OTP (samples in various languages are available).
+
+      operationId: postCreditor
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: apiToken
+          in: formData
+          description: ERP API Token
+          required: true
+          type: string
+          x-example: 5845FD1A3D1A9915EA9C879BAF6D1DDE5B457143
+        - name: otp
+          in: formData
+          description: Value calculated based on salt and private key (if enhanced security)
+          required: false
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: >
+            For security reasons, the http status is ** always ** 200, however for returning error codes specific to the call
+            2 additional response headers were added "ApiError" and "ApiErrorCode" which are added on every response that contains errors.
+            Notible exceptions are authentication errors and authorisation errors that don't have these 2 headers.
+          examples:
+            Valid token:
+              {
+                "Authorization":"mysessiontoken"
+              }
+    get:
+      tags:
+        - General
+      summary: Logout
+      description: Invalidates the AuthorizationToken by making a GET request to /creditor
+      operationId: getCreditor
+      security:
+        - session_key : []
+      responses:
+        '204':
+          description: Logged out succesfully
+  /creditor/mandate:
+    get:
+      summary: Update Feed
+      description: >
+
+        Returns a List of all updated mandates (new, changed or cancelled) **since the last call. **
+
+        From the moment there are changes (eg. a new contract/mandate or an update of an existing contract)
+        this call provides all related information to the creditor. The service is initiated by the creditor
+        and provides all MRI information (and extra metadata) to the creditor. This call can either be triggered by a callback
+        once a change was made or periodically when no callback can be made.
+
+        This information can serve multiple purposes:
+
+          * Updating a CRM system to take appropriate actions (eg. call the customer on cancel..)
+          * Integrate the info in an ERP system to create the correct SDD files (in case of mandates)
+
+        If your system is out of sync or the full mandate database needs to be refreshed an optional "X-RESET" header
+        can be passed. The format can be a timestamp like "2015-08-20T13:02:03Z" or a specific MandateNumber.
+        After that you will receive (all) mandate updates since that time again.
+
+        In order too avoid polling, a hook can be setup to notify the client when new information is available.
+        This hook can be configured in the settings > erp section.
+
+      operationId: getCreditorMandate
+      tags:
+        - Mandates
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: chunkSize
+          in: query
+          description: Amount of mandates to return per call (max 100)
+          required: false
+          type: integer
+          format: int64
+          default: 100
+      responses:
+        '200':
+          description: The request has succeeded
+          schema:
+            $ref: '#/definitions/MandateResponse'
+          examples:
+            Example stream:
+              {
+                  "GrpHdr": {
+                      "CreDtTm": "2015-08-20T13:02:03Z"
+                  },
+                  "Messages": [
+                      {
+                          "EvtTime": "2015-06-23T11:31:51Z",
+                          "Mndt": {
+                              "Cdtr": {
+                                  "CtctDtls": {
+                                      "EmailAdr": "info@creditor.com"
+                                  },
+                                  "CtryOfRes": "BE",
+                                  "Id": "BE0533800797",
+                                  "Nm": "Twikey N.V.",
+                                  "PstlAdr": {
+                                      "AdrLine": "Veldstraat 11",
+                                      "Ctry": "BE",
+                                      "PstCd": "9000",
+                                      "TwnNm": "Gent"
+                                  }
+                              },
+                              "CdtrSchmeId": "BE54ZZZ0533800797",
+                              "Dbtr": {
+                                  "CtctDtls": {
+                                      "EmailAdr": "admin@debtorcpy.be"
+                                  },
+                                  "CtryOfRes": "BE",
+                                  "Id": "BE123456789",
+                                  "Nm": "debtorCompany Inc.",
+                                  "PstlAdr": {
+                                      "AdrLine": "Street 52",
+                                      "Ctry": "BE",
+                                      "PstCd": "1000",
+                                      "TwnNm": "Brussels"
+                                  }
+                              },
+                              "DbtrAcct": "BE493104522",
+                              "DbtrAgt": {
+                                  "FinInstnId": {
+                                      "BICFI": "BBRUBEBB",
+                                      "Nm": "ING BELGIUM NV/SA"
+                                  }
+                              },
+                              "LclInstrm": "CORE",
+                              "MaxAmt": "0",
+                              "MndtId": "1600650622",
+                              "Ocrncs": {
+                                  "Drtn": {
+                                      "FrDt": "2015-06-13"
+                                  },
+                                  "Frqcy": "ADHO",
+                                  "SeqTp": "RCUR"
+                              },
+                              "RfrdDoc": "1000",
+                              "SplmtryData": [
+                                  {
+                                      "Key": "SignerPlace#0",
+                                      "Value": "Brussels"
+                                  },
+                                  {
+                                      "Key": "SignerDate#0",
+                                      "Value": "2015-06-22T21:00:00Z"
+                                  }
+                              ]
+                          }
+                      }
+                  ]
+              }
+    post:
+      tags:
+        - Mandates
+      summary: Import
+      description: Import existing mandates (or updates)
+      operationId: postCreditorMandate
+      security:
+        - session_key : []
+      consumes:
+        - application/xml
+        - application/json
+      parameters:
+        - name: Mandates
+          in: body
+          description: All mandate updates like in fetch (json)
+          required: true
+          schema:
+            $ref: '#/definitions/MandateResponse'
+      responses:
+        '204':
+          description: Batch import of mandates was fully done or not at all
+    delete:
+      tags:
+        - Mandates
+      summary: Cancel
+      description: >
+        A contract can be cancelled by either debtor or creditor, this can be
+        done via the website or the api. However, there may be circumstances in
+        which the creditor receives the cancel **not**  through Twikey. In order to avoid extra costs & stale
+        information, Twikey requires the update of its systems. The creditor, the
+        creditor bank or the debtor bank, can initiate this
+        request. Afterwards the update is distributed to all parties.
+      operationId: deleteCreditorMandate
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: mndtId
+          in: query
+          description: Mandate Reference
+          required: true
+          type: string
+        - name: rsn
+          in: query
+          description: Reason of cancellation
+          required: true
+          type: string
+      responses:
+        200:
+          description: The request has succeeded
+        400:
+          description: >
+            User error, error code can be found in ApiError response header, translated value can be found in the body
+            eg.
+            * No contract was selected or invalid mndtId supplied
+            * Contract had wrong status (eg. already cancelled) or not authorised
+            * No contract was selected or mandate not found
+            * Please provide reason
+  /creditor/mandate/detail:
+    get:
+      tags:
+        - Mandates
+      summary: Mandate Details
+      description: Retrieve details of a specific mandate
+      operationId: getCreditorMandateDetails
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: mndtId
+          in: query
+          description: Mandate Reference
+          required: true
+          type: string
+        - name: force
+          in: query
+          description: Also include non-signed states
+          required: false
+          type: boolean
+      responses:
+        '200':
+          description: Details of the mandate (see /creditor/mandate)
+  /creditor/customeraccess:
+    post:
+      tags:
+        - Mandates
+      summary: Customer access
+      description: Allow debtor access to a specific mandate
+      operationId: CustomerAccess
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: mndtId
+          in: query
+          description: Mandate Reference
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Link valid for 2min. allowing debtor access to the mandate
+  /creditor/mandate/update:
+    post:
+      tags:
+        - Mandates
+      summary: Update
+      description: >
+        Sometimes sending in the complete mandate is overkill and sending just
+        the updated information is a lot easier by just passing the updated information. This endpoint allows to update
+        account, address, email, phone information and plan.
+      operationId: postCreditorMandateUpdate
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: mndtId
+          in: query
+          description: Mandate Reference
+          required: true
+          type: string
+        - name: iban
+          in: query
+          required: false
+          type: string
+        - name: bic
+          in: query
+          required: false
+          type: string
+        - name: address
+          in: query
+          description: Street (street + number)
+          required: false
+          type: string
+        - name: zip
+          in: query
+          required: false
+          type: string
+        - name: city
+          in: query
+          required: false
+          type: string
+        - name: country
+          in: query
+          description: Country (ISO 2 letters)
+          required: false
+          type: string
+        - name: mobile
+          in: query
+          description: International format +32499123445
+          required: false
+          type: string
+        - name: email
+          in: query
+          required: false
+          type: string
+      responses:
+        204:
+          description: 'The server has fulfilled the request but does not need to return an entity-body, and might want to return updated meta-information'
+        400:
+          description: >
+            User error, error code can be found in ApiError response header, translated value can be found in the body
+            eg.
+            * No contract was selected or invalid mndtId supplied
+            * Mandates are editable only when in Prepared/Print state or CORE or not authorised
+            * No contract was selected or mandate not found
+  /creditor/mandate/plan:
+      post:
+        tags:
+          - Mandates
+        summary: Update a plan
+        description: >
+          Sometimes a plan on an existing mandate needs to be updated.
+          This endpoint allows to update a plan, just by passing the data for the new plan.
+        operationId: postCreditorMandatePlan
+        security:
+          - session_key : []
+        consumes:
+          - application/x-www-form-urlencoded
+        parameters:
+          - name: mndtId
+            in: query
+            description: Mandate Reference
+            required: true
+            type: string
+          - name: plan
+            in: query
+            description: Name of the plan
+            required: true
+            type: string
+          - name: _pls
+            in: query
+            required: false
+            type: string
+            description: Startdate of the plan
+          - name: _pli
+            in: query
+            required: false
+            type: string
+            description: Possible values are 1w, 2w, 1m, 2m, 3m, 4m, 6m, 12m
+          - name: _plo
+            in: query
+            required: false
+            type: string
+            description: Day of the interval on which the plan must be executed
+          - name: _plt
+            in: query
+            required: false
+            type: string
+            description: Number of times the plan must be executed
+          - name: _pla
+            in: query
+            required: false
+            type: string
+            description: Amount associated to the plan
+          - name: _pld
+            in: query
+            required: false
+            type: string
+            description: Message associated to the plan
+        responses:
+          204:
+            description: 'The server has fulfilled the request but does not need to return an entity-body, and might want to return updated meta-information'
+          400:
+            description: >
+              User error, error code can be found in ApiError response header, translated value can be found in the body
+              eg.
+              * The plan parameter was not provided or an invalid planparameter supplied
+              * Mandates are editable only when in Prepared/Print state or CORE or not authorised
+              * No contract was selected or mandate not found
+  /creditor/mandate/pdf:
+    get:
+      tags:
+        - Mandates
+      summary: Retrieve pdf
+      description: Retrieve pdf of a mandate
+      operationId: getCreditorMandatePdf
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/pdf
+      parameters:
+        - name: mndtId
+          in: query
+          description: Mandate Reference
+          required: true
+          type: string
+      responses:
+        '200':
+          description: PDF is available in the body of the response
+    post:
+      tags:
+        - Mandates
+      summary: Upload pdf
+      description: Import existing mandate pdf (eg. scan of a printed document)
+      operationId: postCreditorMandatePdf
+      security:
+        - session_key : []
+      consumes:
+        - application/pdf
+      parameters:
+        - name: mndtId
+          in: query
+          description: Mandate Reference
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Import of the pdf was done
+  /creditor/invite:
+    post:
+      tags:
+        - Mandates
+      summary: Invite
+      description: Necessary to start with an eMandate. The end-result is a signed or protected shortlink that will allow the end-customer to sign a mandate. The (short)link can be embedded in your website or in an email or in a paper letter. We advise to use the shortlink as the data is not exposed in the URL's. The parameters are as described in
+        <a href="/r/admin/doc/api#6-prepare-contract-or-url">Prepare Contracts</a>.
+      operationId: postCreditorPrepare
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: ct
+          in: formData
+          description: Contract template to use
+          required: true
+          type: integer
+        - name: l
+          in: formData
+          description: Language (en/fr/nl/de/pt/es/it)
+          required: false
+          type: string
+        - name: iban
+          in: formData
+          required: false
+          type: string
+        - name: bic
+          in: formData
+          required: false
+          type: string
+        - name: mandateNumber
+          in: formData
+          description: Mandate Identification number (if not generated)
+          required: false
+          type: string
+        - name: email
+          in: formData
+          required: true
+          type: string
+        - name: lastname
+          in: formData
+          required: false
+          type: string
+        - name: firstname
+          in: formData
+          required: false
+          type: string
+        - name: mobile
+          in: formData
+          description: mobile number required for sms (International format +32499123445)
+          required: false
+          type: string
+        - name: address
+          in: formData
+          description: Address (street + number)
+          required: false
+          type: string
+        - name: city
+          in: formData
+          required: false
+          type: string
+        - name: zip
+          in: formData
+          required: false
+          type: string
+        - name: country
+          in: formData
+          required: false
+          description: ISO format (2 letters)
+          type: string
+        - name: companyName
+          in: formData
+          description: the company name (if debtor is company)
+          required: false
+          type: string
+        - name: vatno
+          in: formData
+          description: the enterprise number (if debtor is company)
+          required: false
+          type: string
+        - name: form
+          in: formData
+          description: the legal form of the company (if debtor is company)
+          required: false
+          type: string
+        - name: contractNumber
+          in: formData
+          description: the contract number which can override the one defined in the template.
+          required: false
+          type: string
+        - name: campaign
+          in: formData
+          description: Campaign to include this url in
+          required: false
+          type: string
+        - name: prefix
+          in: formData
+          description: Optional prefix to use in the url (default companyname)
+          required: false
+          type: string
+        - name: check
+          in: formData
+          description: If an existing mandate exists, don't prepare a new (based on email + template(=ct))
+          required: false
+          type: boolean
+        - name: amount
+          in: formData
+          description: Amount of the transaction to put on the mandate after it's signed
+          required: false
+          type: number
+        - name: sendInvite
+          in: formData
+          description: Send out invite email directly
+          required: false
+          type: boolean
+        - name: reminderDays
+          in: formData
+          description: Send a reminder if contract was not signed after number of days
+          required: false
+          type: number
+      responses:
+        '200':
+          description: >
+            If the check option is provided and an existing mandate is available it will be returned.
+            Otherwise an url and key will be returned.
+          examples:
+            New agreement:
+              {
+                  "url": "http://twikey.to/mycompany/xlBF",
+                  "key": "xlBF",
+                  "mndtId": "Comp71"
+              }
+            Existing (Valid) with check enabled:
+              {
+                  "mndtId": "Comp71"
+              }
+  /creditor/ident:
+    get:
+      tags:
+        - Identification
+      summary: Bank Retrieval
+      description: Allow retrieving possible banks for a certain mechanisms
+      operationId: identFetch
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: ct
+          in: formData
+          description: Contract template to use
+          required: true
+          type: integer
+        - name: method
+          in: formData
+          description: Mechanism to be used
+          required: false
+          type: string
+      responses:
+        '200':
+          description: >
+
+          examples:
+              {
+                  "Options": [
+                      {
+                          "Bic": "ABNANL2A",
+                          "Name": "ABNAmro"
+                      },
+                      {
+                          "Bic": "RABONL2U",
+                          "Name": "RABOBANK"
+                      },
+                      {
+                          "Bic": "INGBNL2A",
+                          "Name": "ING"
+                      }
+                  ]
+              }
+    post:
+      tags:
+        - Identification
+      summary: Identification
+      description: Allow retrieving authentication url's for different mechanisms
+      operationId: identPrepare
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: ct
+          in: formData
+          description: Contract template to use
+          required: true
+          type: integer
+        - name: method
+          in: formData
+          description: Mechanism to be used
+          required: false
+          type: string
+        - name: bic
+          in: formData
+          required: false
+          type: string
+        - name: token
+          in: formData
+          description: Optional token to be returned when the user is redirected to the exit url
+          required: false
+          type: string
+      responses:
+        '200':
+          description: >
+            Url to redirect to for authenticating the user
+          examples:
+              {
+                  "url": "https://www.bank.nl/some_parameters"
+              }
+  /creditor/sign:
+    post:
+      tags:
+        - Mandates
+      summary: Create and sign
+      description: >
+        Create a contract with an invitation/signature directly via API. Note that this call can require different parameters depending on the method of signature.
+        All parameters are described in <a href="/r/admin/doc/api#12-direct-signature-of-a-core-mandate">Create contracts</a>
+
+        When enabled for your contract it is possible to negiotiate mandates with their signature directly via API. Depending on
+        the method the set of required parameters and/or handling may differ.
+
+        Methods currently supported :
+
+         * sms: require the mobile parameter
+         * digisign a base64 encoded png should be provided as payload. (max 150 k)
+         * Challenge/Response
+
+      operationId: postCreditorSign
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: signDate
+          in: formData
+          description: 'Date of signature (xsd:dateTime / yyyy-mm-dd), sms uses date of reply '
+          required: false
+          type: string
+        - name: method
+          in: formData
+          description: Method to sign (sms or digisign)
+          required: false
+          type: string
+        - name: l
+          in: formData
+          description: Language (en/fr/nl/de/pt/es/it)
+          required: false
+          type: string
+        - name: place
+          in: formData
+          description: Place of signature
+          required: false
+          type: string
+        - name: ct
+          in: formData
+          description: Contract template to use
+          required: false
+          type: number
+        - name: iban
+          in: formData
+          required: true
+          type: string
+        - name: bic
+          in: formData
+          required: true
+          type: string
+        - name: mandateNumber
+          in: formData
+          description: Mandate Identification number (if not generated)
+          required: false
+          type: string
+        - name: email
+          in: formData
+          required: false
+          type: string
+        - name: lastname
+          in: formData
+          required: false
+          type: string
+        - name: firstname
+          in: formData
+          required: false
+          type: string
+        - name: mobile
+          in: formData
+          description: mobile number required for sms (International format +32499123445)
+          required: false
+          type: string
+        - name: address
+          in: formData
+          description: Address (street + number)
+          required: false
+          type: string
+        - name: city
+          in: formData
+          required: false
+          type: string
+        - name: zip
+          in: formData
+          required: false
+          type: string
+        - name: country
+          in: formData
+          required: false
+          description: ISO format (2 letters)
+          type: string
+        - name: companyName
+          in: formData
+          description: the company name (if debtor is company)
+          required: false
+          type: string
+        - name: vatno
+          in: formData
+          description: the enterprise number (if debtor is company)
+          required: false
+          type: string
+        - name: form
+          in: formData
+          description: the legal form of the company (if debtor is company)
+          required: false
+          type: string
+        - name: contractNumber
+          in: formData
+          description: the contract number which can override the one defined in the template.
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            New valid agreement:
+              {
+                  "Msg": "OK",
+                  "MndtId": "MyMandateId"
+              }
+
+  /creditor/legal:
+    get:
+      tags:
+        - Mandates
+      summary: Retrieve legal terms
+      description: Retrieve legal terms
+      operationId: getCreditorLegal
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: locale
+          in: query
+          description: eg. nl, nl_NL, nl_BE, de, fr, fr_LU
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            Legal terms:
+              {
+                "bySigning": "By signing this mandate ....",
+                "rightsCore": "As part of your rights, ....",
+                "rightsB2b": "This mandate is only intended...",
+                "infoCorrect": "By signing this document ..."
+              }
+  /creditor/transaction:
+    post:
+      tags:
+        - Transactions
+      summary: New transaction
+      description: Add transaction to an existing mandate
+      operationId: postCreditorBilling
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: mndtId
+          in: formData
+          description: Mandate Reference
+          required: true
+          type: string
+        - name: date
+          in: formData
+          description: Date of the billable event or now when empty
+          required: false
+          type: string
+          x-example: 'Date of purchase (xsd:dateTime / yyyy-mm-dd)'
+        - name: reqcolldt
+          in: formData
+          description: Requested date of the billable event
+          required: false
+          type: string
+          x-example: 'Date of purchase (xsd:dateTime / yyyy-mm-dd)'
+        - name: message
+          in: formData
+          description: Message to the customer (if only 1 entry)
+          required: true
+          type: string
+        - name: ref
+          in: formData
+          description: Your reference
+          required: false
+          type: string
+        - name: amount
+          in: formData
+          description: Amount to be billed
+          required: true
+          type: string
+        - name: place
+          in: formData
+          description: Optional place
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            Newly added transaction:
+              {
+                  "Entries": [
+                      {
+                          "id": 86860,
+                          "contractId": 52152,
+                          "mndtId": "TWIKEYCORE71",
+                          "contract": "Contractnumber Twikey",
+                          "amount": 10.0,
+                          "msg": "test",
+                          "place": null,
+                          "reqcolldt": "2016-02-03",
+                          "date": "2016-02-03T07:11:43Z"
+                      }
+                  ]
+              }
+    put:
+      tags:
+        - Transactions
+      summary: Update a transaction
+      description: Update parameters for an existing transaction.
+      operationId: updateTransaction
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: id
+          in: formData
+          description: Transaction id
+          required: true
+          type: string
+        - name: amount
+          in: formData
+          description: Amount to be billed
+          required: false
+          type: string
+        - name: reqcolldt
+          in: formData
+          description: Requested date of the billable event
+          required: false
+          type: string
+          x-example: 'Date of purchase (xsd:dateTime / yyyy-mm-dd)'
+        - name: message
+          in: formData
+          description: Message to the customer (if only 1 entry)
+          required: false
+          type: string
+        - name: place
+          in: formData
+          description: Optional place
+          required: false
+          type: string
+        - name: ref
+          in: formData
+          description: Your reference
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+        '400':
+          description: User error if parameter is given but not valid
+    delete:
+      tags:
+        - Transactions
+      summary: Remove a transaction
+      description: Remove a transaction that wasn't collected yet
+      operationId: deleteCreditorTransactions
+      consumes:
+        - application/x-www-form-urlencoded
+      security:
+        - session_key : []
+      parameters:
+        - name: id
+          in: query
+          description: a transactionId as returned in the post
+          required: false
+          type: string
+        - name: mndtId
+          in: query
+          description: all open transactions linked to the mandateReference
+          required: false
+          type: string
+        - name: ref
+          in: query
+          description: transactionReference as provided in the post to be removed
+          required: false
+          type: string
+      responses:
+        '204':
+          description: The request has succeeded
+    get:
+        tags:
+          - Transactions
+        summary: Transaction feed
+        description: Retrieve feed of updated transactions.
+          If your system is out of sync or the full payment database needs to be refreshed an optional "X-RESET" header
+          can be passed. The format can be a timestamp like "2015-08-20T13:02:03Z".
+          After that you will receive (all) payment updates since that time again.
+        operationId: getCreditorTransactions
+        consumes:
+          - application/x-www-form-urlencoded
+        security:
+          - session_key : []
+        responses:
+          '200':
+            description: The request has succeeded
+            examples:
+              Transactions with payment updates:
+                {
+                    "Entries": [
+                      {
+                          "id": 123456789,
+                        "contractId": 10001,
+                        "mndtId": "mandateReference",
+                        "contract": "contractNumber",
+                        "amount": 99.99,
+                        "msg": "transaction message",
+                        "place": "web",
+                        "ref": null,
+                        "final": true,
+                        "state": "PAID",
+                         "bkdate": "2017-03-21T08:13:21Z",
+                        "reqcolldt": "2017-03-23T08:13:21Z"
+                      },
+                      {
+                        "id": 987654321,
+                        "contractId": 2002,
+                        "mndtId": "mandateReference",
+                        "contract": "contractNumber",
+                         "amount": 100,
+                        "msg": "transaction message",
+                        "place": "web",
+                        "ref": "INVOICE001",
+                        "final": false,
+                        "state": "ERROR",
+                        "bkerror": "MS03",
+                        "bkmsg": "No reason specified",
+                        "bkdate": "2016-09-21T08:13:21Z",
+                        "reqcolldt": null
+                      },
+                      {
+                        "id": 56789123,
+                        "contractId": 3003,
+                        "mndtId": "mandateReference",
+                        "contract": "contractNumber",
+                        "amount": 49.99,
+                        "msg": "buy item X",
+                        "place": "web",
+                        "ref": null,
+                        "final": true,
+                        "state": "ERROR",
+                        "bkerror": "AC04",
+                        "bkmsg": "Account closed",
+                        "bkdate": "2016-08-29T13:14:40Z",
+                        "reqcolldt": null
+                      },
+                      ...
+                    ]
+                  }
+  /creditor/transaction/detail:
+    get:
+        tags:
+          - Transactions
+        summary: Transaction status
+        description: Retrieve status of a (set of) transaction(s) (Note that this is a snapshot and might not be final).
+          Please use the Transaction feed or Payment feed in order to be in sync.
+        operationId: getCreditorTransactionDetails
+        consumes:
+          - application/x-www-form-urlencoded
+        security:
+          - session_key : []
+        parameters:
+          - name: id
+            in: query
+            description: 1 or more ids of a transaction (empty will return all open)
+            required: false
+            type: string
+          - name: ref
+            in: query
+            description: 1 or more refs of a transaction
+            required: false
+            type: string
+        responses:
+          '200':
+            description: The request has succeeded
+            examples:
+              Non-collected transactions:
+                {
+                    "Entries": [
+                        {
+                            "id": 86860,
+                            "contractId": 52152,
+                            "mndtId": "TWIKEYCORE71",
+                            "contract": "Contractnumber Twikey",
+                            "amount": 10.0,
+                            "msg": "test",
+                            "place": null,
+                            "reqcolldt": null,
+                            "ref": null,
+                            "date": "2016-02-03T07:11:43Z"
+                        },{
+                            "id": 86861,
+                            "contractId": 52152,
+                            "mndtId": "TWIKEYCORE73",
+                            "contract": "Contractnumber Twikey",
+                            "amount":20.0,
+                            "msg": "test",
+                            "place": null,
+                            "ref": "My Ref",
+                            "reqcolldt": "2016-02-03",
+                            "date": "2016-02-03T07:11:43Z"
+                        }
+                    ]
+                }
+  /creditor/transaction/action:
+    post:
+      tags:
+        - Transactions
+      summary: Action on a transaction
+      description: Execute an action on a transaction, this will allow you to change the status or start a specific flow for the given transaction.
+      operationId: updateTransactionAction
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: id
+          in: formData
+          description: Transaction id
+          required: true
+          type: string
+        - name: action
+          in: formData
+          description: Action to execute for the given transaction, possible actions (PAID, REOFFER, BACKUP)
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+        '400':
+          description: User error if parameter is given but not valid
+  /creditor/prenotification:
+    post:
+      tags:
+        - Collections
+      summary: Prenotify
+      description: Send a prenotification notice to the customer
+      operationId: postCreditorPrenotification
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: mndtId
+          in: formData
+          description: Mandate Reference
+          required: true
+          type: string
+        - name: message
+          in: formData
+          description: Message to debtor
+          required: true
+          type: string
+        - name: collectionDate
+          in: formData
+          description: Date of collection (yyyy-mm-dd)
+          required: true
+          type: string
+        - name: amount
+          in: formData
+          description: Amount (Format 12.33)
+          required: true
+          type: number
+          format: double
+        - name: invoiceUrl
+          in: formData
+          description: Url to the actual invoice
+          required: true
+          type: string
+      responses:
+        200:
+          description: success
+        400:
+          description: >
+            User error, error code can be found in ApiError response header, translated value can be found in the body
+            eg.
+            * No contract was found for the mndtId supplied
+            * Invalid amount was given
+            * Invalid date was given
+  /creditor/collect:
+    post:
+      tags:
+        - Collections
+      summary: Execute Collection
+      description: Prepare a collection file and sent to collecting agent if available with the account data specified in the contract template.
+      operationId: postCreditorCollect
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: ct
+          in: formData
+          description: Contract template for which to do the collection
+          required: true
+          type: number
+        - name: colltndt
+          in: formData
+          description: Collection date (yyyy-mm-dd)
+          required: true
+          type: string
+        - name: mndtId
+          in: formData
+          description: "Optional array of mandateId's (default = all with billable entries)"
+          required: false
+          type: array
+          items:
+            type: string
+          collectionFormat: multi
+        - name: prenotify
+          in: formData
+          description: "Optional parameter, it's existence will trigger the prenotification towards the debtor (true/false)"
+          required: false
+          type: boolean
+      responses:
+        '200':
+          description: Returns the id referencing the recurring sdd send to bank
+          examples:
+            Id's of the generated collections:
+              {
+                  "msgId": "123"
+              }
+  /creditor/collect/sdd:
+    post:
+      tags:
+        - Collections
+      summary: Download collection file(s)
+      description: Prepare the collection file(s) and download the zipped sdd file(s)
+      operationId: postCreditorCollectSdd
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/zip
+      parameters:
+        - name: ct
+          in: formData
+          description: Contract template for which to do the collection
+          required: true
+          type: number
+        - name: colltndt
+          in: formData
+          description: Collection date (yyyy-mm-dd)
+          required: false
+          type: string
+        - name: mndtId
+          in: formData
+          description: "Optional array of mandateId's (default = all with billable entries)"
+          required: false
+          type: array
+          items:
+            type: string
+          collectionFormat: multi
+        - name: prenotify
+          in: formData
+          description: "Optional parameter, it's existence will trigger the prenotification towards the debtor (true/false)"
+          required: false
+          type: boolean
+      responses:
+        '200':
+          description: Returns the zip containing all files to be uploaded to the bank
+  /creditor/payment:
+    get:
+      tags:
+        - Collections
+      summary: Collection Status
+      description: Retrieve all payments obtained so far from collecting agent per batch (note that payments retrieved via this call
+        won't be visible anymore via the Transaction feed).
+        If your system is out of sync or the full payment database needs to be refreshed an optional "X-RESET" header
+        can be passed. The format can be a timestamp like "2015-08-20T13:02:03Z".
+        After that you will receive (all) payment updates since that time again.
+      operationId: getCreditorPayment
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: id
+          in: query
+          description: Specific SDD reference
+          required: false
+          type: number
+        - name: detail
+          in: query
+          description: Include details (true = default/false)
+          required: false
+          type: boolean
+          default: true
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            New payment information:
+              {
+                  "Sdds": [
+                      {
+                          "id": 1440095919005,
+                          "pmtinfid": "mypmtid",
+                          "tx": 1,
+                          "amount": 198.22,
+                          "Entries": [
+                              {
+                                  "e2eid": "mye2e",
+                                  "contractId": 4062,
+                                  "mandateRef": "TWIKEYTST3",
+                                  "contract": "1000038",
+                                  "amount": 198.22,
+                                  "msg": "Test Twikey",
+                                  "final": true,
+                                  "bkdate": "2015-08-20",
+                                  "bkamount": 198.22,
+                                  "bkerror": "paid"
+                              }
+                          ]
+                      }
+                  ]
+              }
+  /creditor/payment/link:
+    post:
+      tags:
+        - Transactions
+      summary: Create payment link
+      description:
+        Create a payment link for an affeliated customer (via email)
+        or via a name (in which case no customer is linked
+      operationId: postPaymentLink
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: email
+          in: formData
+          description: Email of the customer
+          required: false
+          type: string
+        - name: name
+          in: formData
+          description: Name of the customer
+          required: false
+          type: string
+        - name: message
+          in: formData
+          description: Message to the customer (if only 1 entry)
+          required: true
+          type: string
+        - name: ref
+          in: formData
+          description: Your reference
+          required: false
+          type: string
+        - name: amount
+          in: formData
+          description: Amount to be billed
+          required: true
+          type: string
+        - name: expiry
+          in: formData
+          description: When this link expires
+          required: false
+          type: dateTime
+        - name: place
+          in: formData
+          description: Optional place
+          required: false
+          type: string
+        - name: sendInvite
+          in: formData
+          description: Send out invite email directly
+          required: false
+          type: boolean
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            New Link information:
+                {
+                    "id": 1,
+                    "amount": 55.66,
+                    "msg": "Test",
+                    "url": "https://mycompany.twikey.com/payment/tr_l2iKz0LT8HvRrmf0"
+                }
+    get:
+      tags:
+        - Transactions
+      summary: Get payment link status
+      description: Get status of a payment link
+      operationId: getPaymentLink
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: id
+          in: formData
+          description: Id of the created link
+          required: true
+          type: number
+        - name: ref
+          in: formData
+          description: Your reference
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            Link information:
+              {
+                  "Links": [
+                      {
+                          "id": 1,
+                          "amount": 55.66,
+                          "msg": "Test",
+                          "ref": "Your ref",
+                          "state": "One of created,started,declined,paid,pending,expired"
+                      }
+                  ]
+              }
+  /creditor/transfer:
+    post:
+      tags:
+        - Credit Transfer
+      summary: New entry
+      description: Add Credit entry to batch
+      operationId: postNewCreditTransfer
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: iban
+          description: Iban of the beneficiary (requires the registration in settings > credit transfer)
+          in: formData
+          required: true
+          type: string
+        - name: message
+          in: formData
+          description: Message to the creditor
+          required: true
+          type: string
+        - name: amount
+          in: formData
+          description: Amount to be send
+          required: true
+          type: number
+          x-example: 21.99
+        - name: date
+          in: formData
+          description: Required execution date of the transaction (ReqdExctnDt)
+          required: false
+          type: string
+          x-example: '2016-12-31 (xsd:date)'
+        - name: place
+          in: formData
+          description: Optional place
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            Newly added transaction:
+              {
+                  "Entries": [
+                      {
+                          "id": "37EB807220170118122507230",
+                          "iban": "BE6xxxxxxxx734",
+                          "amount": 124.0,
+                          "msg": "test",
+                          "date": "2017-01-18"
+                      }
+                  ]
+              }
+    get:
+      tags:
+        - Credit Transfer
+      summary: Get entry details
+      description: Fetch Credit entry details
+      operationId: getNewCreditTransfer
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: id
+          description: id of the previously inserted entry
+          in: formData
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            Previous transaction:
+              {
+                  "Entries": [
+                      {
+                          "id": "37EB807220170118122507230",
+                          "iban": "BE6xxxxxxxx734",
+                          "amount": 124.0,
+                          "msg": "test",
+                          "date": "2017-01-18"
+                      }
+                  ]
+              }
+    delete:
+      tags:
+        - Credit Transfer
+      summary: Remove entry
+      description: Remove Credit entry provided it wasn't sent yet
+      operationId: deleteNewCreditTransfer
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: id
+          description: id of the previously inserted entry
+          in: formData
+          required: true
+          type: string
+      responses:
+        '204':
+          description: The request has succeeded
+  /creditor/transfer/complete:
+    post:
+      tags:
+        - Credit Transfer
+      summary: Submit Batch
+      description: Create Credit Transfer (and optionally send)
+      operationId: postSubmitCreditTransfer
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: ct
+          description: Template containing the originating account
+          in: formData
+          required: true
+          type: string
+        - name: iban
+          description: Originating account, if different from ct account
+          in: formData
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            Newly added transfer:
+              {
+                  "CreditTransfers": [
+                      {
+                          "id": 5,
+                          "pmtinfid": "Twikey-20170118122508977",
+                          "entries": 1
+                      }
+                  ]
+              }
+    get:
+      tags:
+        - Credit Transfer
+      summary: Batch details
+      description: Get Credit Transfer Batch information by id of pmtinfid
+      operationId: getSubmitCreditTransfer
+      security:
+        - session_key : []
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: id
+          description: id returned in the submit
+          in: formData
+          required: false
+          type: number
+        - name: pmtinfid
+          description: pmtinfid returned in the submit
+          in: formData
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The request has succeeded
+          examples:
+            Progress of batch transfer:
+              {
+                  "CreditTransfers": [
+                      {
+                          "id": 5,
+                          "pmtinfid": "Twikey-20170118122508977",
+                          "progress": "sent",
+                          "entries": 1
+                      }
+                  ]
+              }
+definitions:
+  MandateResponse:
+    type: object
+    properties:
+      GrpHdr:
+        $ref: '#/definitions/GrpHdr'
+      Messages:
+        type: array
+        items:
+          $ref: '#/definitions/Mandate'
+  GrpHdr:
+    type: object
+    properties:
+      CreDtTm:
+        type: string
+  SplmtryData:
+    type: object
+    properties:
+      key:
+        type: string
+      value:
+        type: object
+  Mandate:
+    type: object
+    properties:
+      EvtTime:
+        type: string
+      Mndt:
+        type: object
+        properties:
+          MndtId:
+            type: string
+          LclInstrm:
+            type: string
+          MaxAmt:
+            type: number
+          Ocrncs:
+            type: number
+          CdtrSchmeId:
+            type: string
+          RfrdDoc:
+            type: string
+          SplmtryData:
+            type: array
+            items:
+              $ref: '#/definitions/SplmtryData'
+          Cdtr:
+            type: object
+            properties:
+              CtctDtls:
+                type: object
+                properties:
+                  EmailAdr:
+                    type: string
+              CtryOfRes:
+                type: string
+              Id:
+                type: string
+              Nm:
+                type: string
+              PstlAdr:
+                type: object
+                properties:
+                  AdrLine:
+                    type: string
+                  Ctry:
+                    type: string
+                  PstCd:
+                    type: string
+                  TwnNm:
+                    type: string
+          Dbtr:
+            type: object
+            properties:
+              CtctDtls:
+                type: object
+                properties:
+                  EmailAdr:
+                    type: string
+              CtryOfRes:
+                type: string
+              Id:
+                type: string
+              Nm:
+                type: string
+              PstlAdr:
+                type: object
+                properties:
+                  AdrLine:
+                    type: string
+                  Ctry:
+                    type: string
+                  PstCd:
+                    type: string
+                  TwnNm:
+                    type: string
+          DbtrAcct:
+            type: string
+          DbtrAgt:
+            type: object
+            properties:
+              FinInstnId:
+                type: object
+                properties:
+                  BICFI:
+                    type: string
+                  Nm:
+                    type: string

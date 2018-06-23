@@ -1,0 +1,2123 @@
+{
+	"variables": [
+		{"key":"api_key","type":"string"},
+		{"key":"ct","type":"number"}
+	],
+	"info": {
+		"name": "Twikey API Test",
+		"_postman_id": "c4f6d2cf-0b20-6c95-5a18-aa13d11ce46e",
+		"description": "# Twikey API\nVersion: 1.0.0\n\n## General use\nTwikey has put in place a number of services enabling software partners, companies with own ERP or CRM systems, banks and other 3rd parties to exchange information . This page describes the different calls that are available to you. The calls allow integration in a number of ways.\n\nAll exchanges require a valid AuthorizationToken passed as a header named \"Authorization\". The AuthorizationToken can be retrieved via the login call and is valid for 24h. Exchanges can respond with both JSON & XML responses (based on the \"Accept\" header).\n\nSince there are numerous ways a company can allow its customers to pay, we provide a couple of high level use-cases to get you up and running in no time.\n\n## Sample use cases\n\n### The fitness scenario\n\nImagine you're going to the fitness where you exercise every once in a while. \nSince this doesn't come free you pay a monthly subscription fee. \nThis subscription fee is a recurring payment (we'll come back to that later). \nBut since all those exercises get you thirsty, you want to drink there too. \nBut of course, there are hotter and colder days. So how much you drink can vary.\n\nRegardless of what you consume, the fitness wants to get paid. \nBut you'd like to avoid getting out your wallet when you're all sweaty. \nSo your fitness made the great decision to use direct debits to allow you to pay. \nAt the end of the month they add the recurring amount to the one-off's (the drinks). \nThey send the payment request to the bank. Everyone's happy and relax.\n\nWhat did the fitness do to achieve this relaxed way of working:\n\nFirst of all, everything starts with a mandate. When a customer enrolls at the fitness he fills in the details for the internal bookkeeping of the fitness. The same information is sent to the prepare call. \nThis returns a URL (representing an unsigned mandate) that opens up after entering all details in the enrollment screen. \nSince the fitness has an internal subscription number they want to use to track payments and have \nmultiple subscriptions (eg. with and without personal trainer) they add both parameters in the prepare call. Making it visible in the mandate overview. \n\nOnce the customer filled in the account info and signed the mandate he's sent back to the fitness website with a \"thank you\" message. \nWhen a customer ask for a drink at the bar, the cash register calls the transaction endpoint with the details and amount. These are one-off transactions. Recurring transactions can either be handled the same way or if a subscription parameter was added in the prepare call, a recurring transaction is automatically added every month to get this subscription paid. At the end of each month, the file is created and sent to the bank manually via the collect call or automatically every night. \nYour bill is paid and the bank sends you the money. When the bank sends us back the account information, it is marked in your transaction overview that the transaction was paid. This information can be retrieved by the payment call. This call returns all new payment information since the last call. If a payment didn't succeed, you can configure what will happen next in the interface in the dunning section.\n\n### The parking app scenario\n\nBecause my customers don't like running in the rain looking for a parking meter while there's an app for that. \nHow can I use Twikey to get my parking fees paid? First of all, you need a mandate . \nThere are three possible options to have this mandate signed:\n\nUse an in-app browser with the link retrieved via the prepare call\nUse the sign call to invite the user to sign via an sms confirmation\nUse the sign call adding the manual signature as a png-image in the payload\nOnce the mandate is signed, in-app purchases can be sent from the backend of the app, collected the same way as mentioned in the fitness scenario.\n\n### The (off-line) webshop scenario\n\nI have a shop where people come in physically but I also have a webshop.\nI want people who signed a mandate (either online via the above flow or physically) to be able to purchase something \nfrom the online shop without requiring them to use their credit card and if possible give them the sameconvenience in the physical shop. \nThis way I can send them an invoice every month by only registering their purchases and collecting the payment via direct debit.\n\nIn the past, I had to send out all invoices and patiently waited for them to be paid. \nSince I'm not the most patient person on earth and even a bit chaotic at times, \nI'd rather collect the money directly from my customers. This way they can't forget to pay and I don't need to remind them to do so. \nHow convenient this is for both my customers and I.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Login",
+			"description": "",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Body has Authorization\"] = responseBody.has(\"Authorization\");",
+									"tests[\"Authorization Header is present\"] = postman.getResponseHeader(\"Authorization\");",
+									"var data = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"Authorization\", data.Authorization);",
+									"tests[\"Authorization\"] = postman.getEnvironmentVariable(\"Authorization\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apiToken",
+									"value": "{{api_key}}",
+									"type": "text",
+									"warning": ""
+								},
+								{
+									"key": "otp",
+									"value": "",
+									"type": "text",
+									"warning": ""
+								}
+							]
+						},
+						"description": "Login"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Mandate",
+			"description": "",
+			"item": [
+				{
+					"name": "Fetch Mandates",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has GrpHdr\"] = data.GrpHdr;",
+									"tests[\"Body has Messages\"] = data.Messages;",
+									"",
+									"for(var i=0;i<data.Messages.length;i++){",
+									"    if(data.Messages[i].CxlRsn){",
+									"        postman.setEnvironmentVariable(\"Canceled\", data.Messages[i].OrgnlMndtId);",
+									"    }",
+									"    else {",
+									"        postman.setEnvironmentVariable(\"Mandate\", data.Messages[i].Mndt.MndtId);",
+									"    }",
+									"}",
+									"tests[\"Canceled\"] = postman.getEnvironmentVariable(\"Canceled\");",
+									"tests[\"Mandate\"] = postman.getEnvironmentVariable(\"Mandate\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/mandate",
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Mandate Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Mndt\"] = data.Mndt;",
+									"tests[\"Body has MndtId\"] = data.Mndt.MndtId;",
+									"tests[\"Body has SplmtryData\"] = data.Mndt.SplmtryData;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/mandate/detail?mndtId=POSTM1",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"mandate",
+								"detail"
+							],
+							"query": [
+								{
+									"key": "mndtId",
+									"value": "POSTM1",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+                      "body": {},
+                      "description": "Get Mandate Details"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Mandate Details signed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Mndt\"] = data.Mndt;",
+									"tests[\"Body has MndtId\"] = data.Mndt.MndtId;",
+									"tests[\"Body has SplmtryData\"] = data.Mndt.SplmtryData;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/mandate/detail?mndtId=POSTM1&force=true",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"mandate",
+								"detail"
+							],
+							"query": [
+								{
+									"key": "mndtId",
+									"value": "POSTM1",
+									"equals": true,
+									"description": ""
+								},
+								{
+									"key": "force",
+									"value": "true",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Get Mandate Details canceled",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Mndt\"] = data.Mndt;",
+									"tests[\"Body has MndtId\"] = data.Mndt.MndtId;",
+									"tests[\"Body has SplmtryData\"] = data.Mndt.SplmtryData;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/mandate/detail?mndtId=POSTM2&force=true",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"mandate",
+								"detail"
+							],
+							"query": [
+								{
+									"key": "mndtId",
+									"value": "POSTM2",
+									"equals": true,
+									"description": ""
+								},
+								{
+									"key": "force",
+									"value": "true",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Get Mandate Details prepared",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Mndt\"] = data.Mndt;",
+									"tests[\"Body has MndtId\"] = data.Mndt.MndtId;",
+									"tests[\"Body has SplmtryData\"] = data.Mndt.SplmtryData;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/mandate/detail?mndtId=POSTM3&force=true",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"mandate",
+								"detail"
+							],
+							"query": [
+								{
+									"key": "mndtId",
+									"value": "POSTM3",
+									"equals": true,
+									"description": ""
+								},
+								{
+									"key": "force",
+									"value": "true",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "prepare mandate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Body has mandateId\"] = responseBody.has(\"mndtId\");",
+									"tests[\"Body has URL\"] = responseBody.has(\"url\");",
+									"tests[\"Body has key\"] = responseBody.has(\"key\");",
+									"var data = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"NewMandate\", data.mndtId);",
+									"tests[\"NewMandate\"] = postman.getEnvironmentVariable(\"NewMandate\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/prepare",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "sendInvite",
+									"value": "false",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "l",
+									"value": "nl",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "email",
+									"value": "support@twikey.com",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "lastname",
+									"value": "Support",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "firstname",
+									"value": "Twikey",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "mobile",
+									"value": "+32479123123",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "address",
+									"value": "Derbystraat 43",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "zip",
+									"value": "9051",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "city",
+									"value": "Sint Denijs Westrem",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "country",
+									"value": "BE",
+									"type": "text",
+									"description": ""
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "prepare mandate copy to cancel",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Body has mandateId\"] = responseBody.has(\"mndtId\");",
+									"tests[\"Body has URL\"] = responseBody.has(\"url\");",
+									"tests[\"Body has key\"] = responseBody.has(\"key\");",
+									"var data = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"NewCancelMandate\", data.mndtId);",
+									"tests[\"NewCancelMandate\"] = postman.getEnvironmentVariable(\"NewCancelMandate\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/prepare",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "sendInvite",
+									"value": "false",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "l",
+									"value": "nl",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "email",
+									"value": "cancel@twikey.com",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "lastname",
+									"value": "Support",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "firstname",
+									"value": "Twikey",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "mobile",
+									"value": "+32479123123",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "address",
+									"value": "Derbystraat 43",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "zip",
+									"value": "9051",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "city",
+									"value": "Sint Denijs Westrem",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "country",
+									"value": "BE",
+									"type": "text",
+									"description": ""
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel prepared Mandate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/mandate?mndtId={{NewCancelMandate}}&rsn=No+reason",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"mandate"
+							],
+							"query": [
+								{
+									"key": "mndtId",
+									"value": "{{NewCancelMandate}}",
+									"equals": true,
+									"description": ""
+								},
+								{
+									"key": "rsn",
+									"value": "No+reason",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "mndtId",
+									"value": "POSTM0",
+									"type": "text",
+									"description": "",
+									"disabled": true
+								},
+								{
+									"key": "rsn",
+									"value": "No reason",
+									"type": "text",
+									"description": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "import mandates",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/mandate",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"GrpHdr\": {\r\n        \"CreDtTm\": \"2017-08-31T07:35:25Z\"\r\n    },\r\n    \"Messages\": [\r\n        {\r\n            \"Mndt\": {\r\n                \"MndtId\": \"POSTM0\",\r\n                \"LclInstrm\": \"CORE\",\r\n                \"Ocrncs\": {\r\n                    \"SeqTp\": \"RCUR\",\r\n                    \"Frqcy\": \"ADHO\",\r\n                    \"Drtn\": {\r\n                        \"FrDt\": \"2017-08-30\"\r\n                    }\r\n                },\r\n                \"CdtrSchmeId\": \"EE07ZZZPOSTMANTEST\",\r\n                \"Cdtr\": {\r\n                    \"Nm\": \"Postman \",\r\n                    \"PstlAdr\": {\r\n                        \"AdrLine\": \"Derbystraat 43\",\r\n                        \"PstCd\": \"9051\",\r\n                        \"TwnNm\": \"Sint Denijs Westrem\",\r\n                        \"Ctry\": \"EE\"\r\n                    },\r\n                    \"Id\": \"EEPOSTMANTEST\",\r\n                    \"CtryOfRes\": \"EE\",\r\n                    \"CtctDtls\": {\r\n                        \"EmailAdr\": \"jonathan@twikey.com\"\r\n                    }\r\n                },\r\n                \"Dbtr\": {\r\n                    \"Nm\": \"Dominique Adriansens\",\r\n                    \"PstlAdr\": {\r\n                        \"AdrLine\": \"Riet\",\r\n                        \"PstCd\": \"8020\",\r\n                        \"TwnNm\": \"Oostkamp\",\r\n                        \"Ctry\": \"BE\"\r\n                    },\r\n                    \"CtryOfRes\": \"BE\",\r\n                    \"CtctDtls\": {\r\n                        \"EmailAdr\": \"contact@twikey.com\",\r\n                        \"MobNb\": null\r\n                    }\r\n                },\r\n                \"DbtrAcct\": \"BE68068897250734\",\r\n                \"DbtrAgt\": {\r\n                    \"FinInstnId\": {\r\n                        \"BICFI\": \"GKCCBEBB\",\r\n                        \"Nm\": \"BELFIUS BANK\"\r\n                    }\r\n                },\r\n                \"RfrdDoc\": \"Algemene voorwaarden\",\r\n                \"SplmtryData\": [\r\n                    {\r\n                        \"Key\": \"MandateName\",\r\n                        \"Value\": \"SEPA Direct Debit\"\r\n                    },\r\n                    {\r\n                        \"Key\": \"TemplateId\",\r\n                        \"Value\": 1323\r\n                    },\r\n                    {\r\n                        \"Key\": \"FirstName\",\r\n                        \"Value\": \"Dominique\"\r\n                    },\r\n                    {\r\n                        \"Key\": \"LastName\",\r\n                        \"Value\": \"Adriansens\"\r\n                    },\r\n                    {\r\n                        \"Key\": \"TRACKER\",\r\n                        \"Value\": \"iJUo\"\r\n                    },\r\n                    {\r\n                        \"Key\": \"SignerMethod#0\",\r\n                        \"Value\": \"print\"\r\n                    },\r\n                    {\r\n                        \"Key\": \"Signer#0\",\r\n                        \"Value\": \"jonathan@twikey.com\"\r\n                    },\r\n                    {\r\n                        \"Key\": \"SignerPlace#0\",\r\n                        \"Value\": \"(Imported)\"\r\n                    },\r\n                    {\r\n                        \"Key\": \"SignerDate#0\",\r\n                        \"Value\": \"2017-08-30T16:37:05Z\"\r\n                    }\r\n                ]\r\n            },\r\n            \"EvtTime\": \"2017-08-30T16:37:05Z\"\r\n        }\r\n    ]\r\n}"
+						},
+						"description": "importing mandates"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Signed Mandate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;",
+									"tests[\"Response is empty\"] = responseBody.length === 0;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/mandate?mndtId=POSTM0&rsn=No+reason",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"mandate"
+							],
+							"query": [
+								{
+									"key": "mndtId",
+									"value": "POSTM0",
+									"equals": true,
+									"description": ""
+								},
+								{
+									"key": "rsn",
+									"value": "No+reason",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "mndtId",
+									"value": "POSTM0",
+									"type": "text",
+									"description": "",
+									"disabled": true
+								},
+								{
+									"key": "rsn",
+									"value": "No reason",
+									"type": "text",
+									"description": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Update Mandate Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;",
+									"tests[\"Response is empty\"] = responseBody.length === 0;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/mandate/update",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "mndtId",
+									"value": "{{Mandate}}",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "mobile",
+									"value": "+32479123123",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": "Get Mandate Details"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel canceled Mandate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;",
+									"var jsonData = JSON.parse(responseBody);",
+									"tests[\"Response invalid state code\"] = jsonData.code === \"err_mandate_invalid_state\";",
+									"tests[\"Response invalid state message\"] = jsonData.message === \"One of the mandates had an invalid state\";"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/mandate?mndtId=POSTM2&rsn=No+reason",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"mandate"
+							],
+							"query": [
+								{
+									"key": "mndtId",
+									"value": "POSTM2",
+									"equals": true,
+									"description": ""
+								},
+								{
+									"key": "rsn",
+									"value": "No+reason",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "mndtId",
+									"value": "POSTM0",
+									"type": "text",
+									"description": "",
+									"disabled": true
+								},
+								{
+									"key": "rsn",
+									"value": "No reason",
+									"type": "text",
+									"description": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Sign SMS",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"tests[\"Has ok\"] = jsonData.Msg === \"ok\";",
+									"tests[\"Has sms\"] = responseBody.has(\"MndtId\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/sign",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "method",
+									"value": "sms",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "place",
+									"value": "Gent",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "iban",
+									"value": "BE68068897250734",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "bic",
+									"value": "GKCCBEBB",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "sms@twikey.com",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "lastname",
+									"value": "Twikey",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "firstname",
+									"value": "SMS",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "mobile",
+									"value": "+32479123123",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "Derbystraat 43",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "Gent",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "zip",
+									"value": "9051",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "country",
+									"value": "BE",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Sign Sofort",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"tests[\"Has ok\"] = jsonData.Msg === \"ok\";",
+									"tests[\"Has MndtId\"] = responseBody.has(\"MndtId\");",
+									"tests[\"Has Url\"] = responseBody.has(\"url\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/sign",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "method",
+									"value": "sofort",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "place",
+									"value": "Gent",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "iban",
+									"value": "BE68068897250734",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "bic",
+									"value": "GKCCBEBB",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "sofort@twikey.com",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "lastname",
+									"value": "Twikey",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "firstname",
+									"value": "SMS",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "mobile",
+									"value": "+32479123123",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "Derbystraat 43",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "Gent",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "zip",
+									"value": "9051",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "country",
+									"value": "BE",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Sign digising",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"tests[\"Has ok\"] = jsonData.Msg === \"ok\";",
+									"tests[\"Has MndtId\"] = responseBody.has(\"MndtId\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/sign",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "method",
+									"value": "digisign",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "place",
+									"value": "Gent",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "iban",
+									"value": "BE68068897250734",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "bic",
+									"value": "GKCCBEBB",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "sofort@twikey.com",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "lastname",
+									"value": "Twikey",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "firstname",
+									"value": "SMS",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "mobile",
+									"value": "+32479123123",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "Derbystraat 43",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "Gent",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "zip",
+									"value": "9051",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "country",
+									"value": "BE",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "digsig",
+									"value": "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",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Sign selfie",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"tests[\"Has ok\"] = jsonData.Msg === \"ok\";",
+									"tests[\"Has MndtId\"] = responseBody.has(\"MndtId\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/sign",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "method",
+									"value": "selfie",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "place",
+									"value": "Gent",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "iban",
+									"value": "BE68068897250734",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "bic",
+									"value": "GKCCBEBB",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "selfie@twikey.com",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "lastname",
+									"value": "Twikey",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "firstname",
+									"value": "SMS",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "mobile",
+									"value": "+32479123123",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "Derbystraat 43",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "Gent",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "zip",
+									"value": "9051",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "country",
+									"value": "BE",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "selfie",
+									"value": "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",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "add transaction",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Entries\"] = data.Entries;",
+									"tests[\"Transaction has id\"] = data.Entries[0].id;",
+									"tests[\"Transaction has amount\"] = data.Entries[0].amount;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/transaction",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "mndtId",
+									"value": "POSTM1",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "message",
+									"value": "testtransaction",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "amount",
+									"value": "50.00",
+									"type": "text",
+									"description": ""
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transactions",
+			"description": "",
+			"item": [
+				{
+					"name": "add transaction for submit",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Entries\"] = data.Entries;",
+									"tests[\"Transaction has id\"] = data.Entries[0].id;",
+									"tests[\"Transaction has amount\"] = data.Entries[0].amount;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/transaction",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "mndtId",
+									"value": "POSTM1",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "message",
+									"value": "testtransaction",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "amount",
+									"value": "50.00",
+									"type": "text",
+									"description": ""
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "add transaction to remove",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Entries\"] = data.Entries;",
+									"tests[\"Transaction has id\"] = data.Entries[0].id;",
+									"postman.setEnvironmentVariable(\"id\", data.Entries[0].id);",
+									"tests[\"Environment has id\"] = postman.getEnvironmentVariable(\"id\");",
+									"tests[\"Transaction has amount\"] = data.Entries[0].amount;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/transaction",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "mndtId",
+									"value": "POSTM1",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "message",
+									"value": "testtransaction",
+									"type": "text",
+									"description": ""
+								},
+								{
+									"key": "amount",
+									"value": "50.00",
+									"type": "text",
+									"description": ""
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "transaction details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Entries\"] = data.Entries;",
+									"tests[\"Transaction has id\"] = data.Entries[0].id;",
+									"tests[\"Transaction has amount\"] = data.Entries[0].amount;",
+									"tests[\"Transaction has state\"] = data.Entries[0].state;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/transaction/detail?id={{id}}",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"transaction",
+								"detail"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "{{id}}",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "remove transaction",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": {
+							"raw": "https://api.twikey.com/creditor/transaction?id={{id}}",
+							"host": [
+								"https://api.twikey.com"
+							],
+							"path": [
+								"creditor",
+								"transaction"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "{{id}}",
+									"equals": true,
+									"description": ""
+								}
+							],
+							"variable": []
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "fetch transactions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Entries\"] = data.Entries;",
+									"",
+									""
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/transaction",
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {},
+						"description": ""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Collections",
+			"description": "",
+			"item": [
+				{
+					"name": "prenotify",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/prenotification",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "mndtId",
+									"value": "POSTM1",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "message",
+									"value": "prenotify message",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "collectionDate",
+									"value": "2017-09-15",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "invoiceUrl",
+									"value": "invoicetest.twikey.com/invoice123",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "amount",
+									"value": "50.00",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "download collection file",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 400\"] = responseCode.code === 400;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/collect/sdd",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "submit collection file",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;",
+									"var jsonData = JSON.parse(responseBody);",
+									"tests[\"Has frstMsgId\"] = responseBody.has(\"frstMsgId\");",
+									"tests[\"Has rcurMsgId\"] = responseBody.has(\"rcurMsgId\");"
+								]
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"postman.setEnvironmentVariable(\"timestamp\", Date.now());"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/collect",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "colltndt",
+									"value": "{{timestamp}}",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Execute collection",
+					"request": {
+						"url": "https://api.twikey.com/creditor/collect",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+                        "description": "Login"
+					},
+					"response": []
+				},
+				{
+					"name": "Fetch collection payments",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Has Sdds\"] = responseBody.has(\"Sdds\");"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/payment",
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {},
+						"description": ""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Credit Transfer",
+			"description": "",
+			"item": [
+				{
+					"name": "Create new Credit Transfer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"",
+									"var jsonData = JSON.parse(responseBody);",
+									"tests[\"Has id\"] = jsonData.Entries[0].id;",
+									"tests[\"Has iban\"] = jsonData.Entries[0].iban;",
+									"tests[\"Has message\"] = jsonData.Entries[0].msg === \"test credit transfer\";"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/transfer",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "iban",
+									"value": "BE68068897250734",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "message",
+									"value": "test credit transfer",
+									"description": "",
+									"type": "text"
+								},
+								{
+									"key": "amount",
+									"value": "50.00",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "Compete credit transfer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests [\"Has CreditTransfers\"]= responseBody.has(\"CreditTransfers\");",
+									"var jsonData = JSON.parse(responseBody);",
+									"tests[\"Has id\"] = jsonData.CreditTransfers[0].id;",
+									"tests[\"Has pmtinfid\"] = jsonData.CreditTransfers[0].pmtinfid;",
+									"tests[\"Has entries\"] = jsonData.CreditTransfers[0].entries;",
+									""
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/transfer/complete",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"description": "",
+									"type": "text"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Identification",
+			"description": "",
+			"item": [
+				{
+					"name": "IDIN",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"tests[\"Body has Url\"] = data.url;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor/ident",
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"description": ""
+							},
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "ct",
+									"value": "{{ct}}",
+									"type": "text",
+									"warning": ""
+								},
+								{
+									"key": "bic",
+									"value": "RABONL2U",
+									"type": "text",
+									"warning": ""
+								}
+							]
+						},
+						"description": "Login"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Logout",
+			"description": "",
+			"item": [
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"tests[\"Status code is 200\"] = responseCode.code === 200;"
+								]
+							}
+						}
+					],
+					"request": {
+						"url": "https://api.twikey.com/creditor",
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{Authorization}}",
+								"description": ""
+							}
+						],
+						"description": "Logout"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
