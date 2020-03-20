@@ -37,13 +37,13 @@ namespace TestWebApp
 //            Console.WriteLine("Response was : "+responseString);
 //        }
 
-        static void Main(string[] args)
+        static async void CreateLinkAndNavigate(string[] args)
         {
             using (var client = new HttpClient())
             {
                 client.BaseAddress = new Uri(baseAddress);
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
+                // For xml : client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
                 var content = new FormUrlEncodedContent(new[]
                 {
                     new KeyValuePair<string, string>("apiToken", API_TOKEN),
@@ -80,19 +80,21 @@ namespace TestWebApp
                             new KeyValuePair<string, string>("vatno", "")
                         });
                         content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
-                        var result2 = client.PostAsync("/creditor/prepare", content).Result;
+                        var response = client.PostAsync("/creditor/prepare", content).Result;
 
-                        var resultContent = result2.Content.ReadAsStringAsync().Result;
+                        var responseString = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine(responseString);
 
-                        var doc = new XmlDocument();
-                        doc.LoadXml(resultContent);
-                        var rootNode = doc.SelectSingleNode("*");
-                        if (rootNode != null && doc.DocumentElement != null) {
-                            var node = doc.DocumentElement.SelectSingleNode("/PrepareResponse/url");
-                            if (node != null && !string.IsNullOrEmpty(node.InnerText)){
-                                Browser.Navigate(node.InnerText);
-                            }
-                        }
+//                        // For xml
+//                        var doc = new XmlDocument();
+//                        doc.LoadXml(responseString);
+//                        var rootNode = doc.SelectSingleNode("*");
+//                        if (rootNode != null && doc.DocumentElement != null) {
+//                            var node = doc.DocumentElement.SelectSingleNode("/PrepareResponse/url");
+//                            if (node != null && !string.IsNullOrEmpty(node.InnerText)){
+//                                Browser.Navigate(node.InnerText);
+//                            }
+//                        }
                     }
                 }
             }
