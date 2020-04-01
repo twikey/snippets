@@ -11,8 +11,8 @@ namespace twikey
         {
             HttpRequest request = Request;
             string payload = request.QueryString.ToString();
-            // payload eg. "msg=dummytest&type=event"
-            checkHmacValidity(apiKey,payload,request.Header["X-SIGNATURE"]);
+            string decodedPayload = HttpUtility.UrlDecode(payload)
+            checkHmacValidity(apiKey,decodedPayload,request.Header["X-SIGNATURE"]);
         }
 
         public bool checkHmacValidity(string apikey,string payload,string signature)
