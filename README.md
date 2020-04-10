@@ -2,16 +2,50 @@ This repository contains code samples for using the [Twikey api](https://twikey.
 
 You can find code samples for eg.
 
-* Calculating the OTP for enhanced security
+* Creating a mandate to be signed by the customer (see specific language)
+* Creating an invoice to be paid (see specific language)
+* Verifying the signature of the webhook (see specific language)
 * Verifying the signature of the exit url
+* Calculating the OTP when using enhanced security
 
+## Testing the API
 
-## Calculation of the OTP
+### Via Postman
 
-Twikey uses sha256 as hashing function using the [default step](https://tools.ietf.org/html/rfc6238#ref-UT) time of 30 seconds with the official unix time.
-The return number is trimmed to 8 digits, More information is available in [RFC6238](https://tools.ietf.org/html/rfc6238)
+Postman is another excellent API Testing solution, the postman file can be found in the root of this repo or download an already customised one from your own environment in the API section.
 
-Please check your language to have a code snippet calculating the otp.
+### Via SoapUI
+
+SoapUI is a free and open source cross-platform Functional Testing solution.
+
+### Step-by-step Guide
+
+* Download and install soapUI.
+* Import the Twikey SoapUI project in SoapUI
+* Open SoapUI
+* Goto File – Import Project
+* Choose the Twikey SoapUI project
+* Select the 'Twikey API' project in SoapUI
+* Choose 'Custom Properties' in the Properties section
+* set 'host' to '[https://api.Twikey.com](https://api.twikey.com)'
+* set 'salt', 'private_key', 'token' to match your ERP product and credentials
+* Test Authentication
+* Double click the 'Login' test case
+* Run the test case
+* Double click the 'login' test step
+* The response is available in the right panel of the window, it should include a "AuthorizationToken"
+* List All Mandates – JSON response
+* Double click the 'List mandates – JSON' test case
+* Double click the 'mandate JSON' test step
+* Adapt the 'since' and 'chunkSize' request parameter in the left panel of the window
+* Run the test case from the 'List mandates – JSON' test case window
+* The response is available in the right panel of the 'mandate JSON' window
+* List All Mandates – XML response
+* Double click the 'List mandates – XML' test case
+* Double click the 'mandate XML ' test step
+* Adapt the 'since' and 'chunkSize' request parameter in the left panel of the window
+* Run the test case from the 'List mandates – XML' test case window
+* The response is available in the right panel of the 'mandate XML' window
 
 ## Verifying the signature of an exit url 
 
@@ -50,41 +84,9 @@ The iban/bic is also hex encoded and can be decrypted by using the md5 hash of t
 
     would be decrypted with cipher AES/CBC/PKCS5Padding and key md5(TWIKEYCORE53 + websiteKey) returning the account in a format iban/bic
 
-## Testing the API
+## Calculation of the OTP
 
-### Via SoapUI
+Twikey uses sha256 as hashing function using the [default step](https://tools.ietf.org/html/rfc6238#ref-UT) time of 30 seconds with the official unix time.
+The return number is trimmed to 8 digits, More information is available in [RFC6238](https://tools.ietf.org/html/rfc6238)
 
-SoapUI is a free and open source cross-platform Functional Testing solution.
-
-### Step-by-step Guide
-
-* Download and install soapUI.
-* Import the Twikey SoapUI project in SoapUI
-* Open SoapUI
-* Goto File – Import Project
-* Choose the Twikey SoapUI project
-* Select the 'Twikey API' project in SoapUI
-* Choose 'Custom Properties' in the Properties section
-* set 'host' to '[https://api.Twikey.com](https://api.twikey.com)'
-* set 'salt', 'private_key', 'token' to match your ERP product and credentials
-* Test Authentication
-* Double click the 'Login' test case
-* Run the test case
-* Double click the 'login' test step
-* The response is available in the right panel of the window, it should include a "AuthorizationToken"
-* List All Mandates – JSON response
-* Double click the 'List mandates – JSON' test case
-* Double click the 'mandate JSON' test step
-* Adapt the 'since' and 'chunkSize' request parameter in the left panel of the window
-* Run the test case from the 'List mandates – JSON' test case window
-* The response is available in the right panel of the 'mandate JSON' window
-* List All Mandates – XML response
-* Double click the 'List mandates – XML' test case
-* Double click the 'mandate XML ' test step
-* Adapt the 'since' and 'chunkSize' request parameter in the left panel of the window
-* Run the test case from the 'List mandates – XML' test case window
-* The response is available in the right panel of the 'mandate XML' window
-
-### Via Postman
-
-Postman is another excellent API Testing solution, the postman file can be found in the root of this repo.
+Please check your language to have a code snippet calculating the otp.
