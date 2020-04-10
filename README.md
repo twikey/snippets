@@ -1,4 +1,4 @@
-This repository contains code samples for using the [Twikey api](https://twikey.com/api).
+This repository contains code samples for using the [Twikey api](https://api.twikey.com).
 
 You can find code samples for eg.
 
@@ -12,7 +12,7 @@ You can find code samples for eg.
 
 ### Via Postman
 
-Postman is another excellent API Testing solution, the postman file can be found in the root of this repo or download an already customised one from your own environment in the API section.
+Postman is another excellent API Testing solution, the postman file can be found in the [root of this repo](https://github.com/twikey/snippets/blob/master/postman.json) or download an already customised one from your own environment in the API section.
 
 ### Via SoapUI
 
@@ -27,7 +27,7 @@ SoapUI is a free and open source cross-platform Functional Testing solution.
 * Choose the Twikey SoapUI project
 * Select the 'Twikey API' project in SoapUI
 * Choose 'Custom Properties' in the Properties section
-* set 'host' to '[https://api.Twikey.com](https://api.twikey.com)'
+* set 'host' to '[https://api.twikey.com](https://api.twikey.com)'
 * set 'salt', 'private_key', 'token' to match your ERP product and credentials
 * Test Authentication
 * Double click the 'Login' test case
