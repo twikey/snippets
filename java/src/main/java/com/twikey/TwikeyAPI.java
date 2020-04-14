@@ -26,6 +26,7 @@ public class TwikeyAPI {
 
     private static final String UTF_8 = "UTF-8";
 
+    private static final String USER_HEADER = "twikey/java-1.0";
     private static final String PROD_ENVIRONMENT = "https://api.twikey.com/creditor";
     private static final String TEST_ENVIRONMENT = "https://api.beta.twikey.com/creditor";
 
@@ -58,7 +59,7 @@ public class TwikeyAPI {
             URL myurl = new URL(endpoint);
             HttpURLConnection con = (HttpURLConnection)myurl.openConnection();
             con.setRequestMethod("POST");
-            con.setRequestProperty("User-Agent", "twikey/java-1.0");
+            con.setRequestProperty("User-Agent", USER_HEADER);
             con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             con.setDoOutput(true);
             con.setDoInput(true);
@@ -170,7 +171,7 @@ public class TwikeyAPI {
         HttpURLConnection con = (HttpURLConnection)myurl.openConnection();
         con.setRequestMethod("POST");
         con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        con.setRequestProperty("User-Agent", "twikey/java-1.0");
+        con.setRequestProperty("User-Agent", USER_HEADER);
         con.setRequestProperty("Authorization", getSessionToken());
         con.setDoOutput(true);
         con.setDoInput(true);
@@ -293,7 +294,7 @@ public class TwikeyAPI {
         HttpURLConnection con = (HttpURLConnection)myurl.openConnection();
         con.setRequestMethod("POST");
         con.setRequestProperty("Content-Type", "application/json");
-        con.setRequestProperty("User-Agent", "twikey/java-1.0");
+        con.setRequestProperty("User-Agent", USER_HEADER);
         con.setRequestProperty("Authorization", getSessionToken());
         con.setDoOutput(true);
         con.setDoInput(true);
@@ -327,6 +328,99 @@ public class TwikeyAPI {
         }
     }
 
+    public interface MandateCallback {
+        void newMandate(JSONObject newMandate);
+        void updatedMandate(JSONObject updatedMandate);
+        void cancelledMandate(JSONObject cancelledMandate);
+    }
+
+    public interface InvoiceCallback {
+        void invoice(JSONObject updatedInvoice);
+    }
+
+    /**
+     * Get updates about all mandates (new/updated/cancelled)
+     * @param invoiceCallback Callback for every change
+     * @param since Optional reset (null = since the last call)
+     * @throws IOException When a network issue happened
+     * @throws UserException When there was an issue while retrieving the mandates (eg. invalid apikey)
+     */
+    public void getUpdatedMandates(MandateCallback mandateCallback, String since) throws IOException, UserException {
+        URL myurl = new URL(endpoint + "/mandate");
+
+        HttpURLConnection con = (HttpURLConnection)myurl.openConnection();
+        con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        con.setRequestProperty("User-Agent", USER_HEADER);
+        con.setRequestProperty("Authorization", getSessionToken());
+
+        if (since != null) {
+            con.setRequestProperty("X-Reset", since);
+        }
+
+        int responseCode=con.getResponseCode();
+        if(responseCode == 200){
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                JSONObject json = new JSONObject(new JSONTokener(br));
+
+                JSONArray messagesArr = json.getJSONArray("Messages");
+                if (!messagesArr.isEmpty()) {
+                    for (int i = 0 ; i < messagesArr.length(); i++) {
+                        JSONObject obj = messagesArr.getJSONObject(i);
+                        if (obj.has("CxlRsn")) {
+                            mandateCallback.cancelledMandate(obj);
+                        } else if (obj.has("AmdmntRsn")) {
+                            mandateCallback.updatedMandate(obj);
+                        } else {
+                            mandateCallback.newMandate(obj);
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            String apiError = con.getHeaderField("ApiError");
+            throw new UserException(apiError);
+        }
+    }
+
+    /**
+     * Get updates about all mandates (new/updated/cancelled)
+     * @param invoiceCallback Callback for every change
+     * @param since Optional reset (null = since the last call)
+     * @throws IOException When a network issue happened
+     * @throws UserException When there was an issue while retrieving the mandates (eg. invalid apikey)
+     */
+    public void getUpdatedInvoices(InvoiceCallback invoiceCallback, String since) throws IOException, UserException{
+        URL myurl = new URL(endpoint + "/invoice");
+
+        HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
+        con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        con.setRequestProperty("User-Agent", USER_HEADER);
+        con.setRequestProperty("Authorization", getSessionToken());
+
+        if (since != null) {
+            con.setRequestProperty("X-Reset", since);
+        }
+
+        int responseCode=con.getResponseCode();
+        if(responseCode == 200){
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                JSONObject json = new JSONObject(new JSONTokener(br));
+
+                JSONArray invoicesArr = json.getJSONArray("Invoices");
+                if (!invoicesArr.isEmpty()) {
+                    for (int i = 0; i < invoicesArr.length(); i++) {
+                        JSONObject obj = invoicesArr.getJSONObject(i);
+                        invoiceCallback.invoice(obj);
+                    }
+                }
+            }
+        }
+        else {
+            String apiError = con.getHeaderField("ApiError");
+            throw new UserException(apiError);
+        }
+    }
 
     private static String getPostDataString(Map<String, String> params)  {
         try{
@@ -438,6 +532,4 @@ public class TwikeyAPI {
             super("Not authenticated");
         }
     }
-
-
 }
