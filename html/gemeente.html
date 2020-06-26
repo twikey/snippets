@@ -1,26 +1,20 @@
-<html>
-<head>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
-          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-</head>
-<body>
-<div class="col-sm-12">
-    <h3 id="newsletter">Betaal uw factuur</h3>
-    <div class="text-muted">Geef uw gestructureerde mededeling in (enkel nummers).</div>
-    <form class="form-inline">
-        <div class="form-group">
-            <input type="text" class="form-control" id="ogm" placeholder="123456789012">
+<div class="widget">
+    <h2>Betaal uw factuur</h2>
+    <form>
+        <div>
+            <label  for="inv" class="text-muted">Geef uw factuurnummer in.</label>
+            <input type="text" class="form-control" id="inv" style="margin:1rem 0;" required>
         </div>
-        <button id="twikeyBtn" class="btn btn-default send_button" type="button">Betalen</button>
+        <div>
+            <label  for="ogm" class="text-muted">Geef uw gestructureerde mededeling in (enkel nummers).</label>
+            <input type="number" class="form-control" id="ogm" placeholder="123456789012" style="margin:1rem 0;" required>
+        </div>
+        <button id="twikeyBtn" class="btn send_button" type="button">Betalen</button>
     </form>
 </div>
-
-<script>
-    var ogm = document.getElementById("ogm");
-    document.getElementById("twikeyBtn").onclick(function () {
-        if(ogm.value)
-            document.location = 'https://gemeente.twikey.com/invoice?r=' + ogm.value;
-    });
+<script type="text/javascript">
+    document.getElementById('twikeyBtn').onclick = function() {
+        if(ogm.value && inv.value)
+            document.location = 'https://gemeente.twikey.com/invoice?r=' + ogm.value + '&i='+inv.value;
+    };
 </script>
-</body>
-</html>

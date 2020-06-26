@@ -36,6 +36,37 @@ public class Utils {
     }
 
     /**
+     * @param websitekey Provided in Settings > Website
+     * @param document Mandatenumber or other
+     * @param status Outcome of the request
+     * @param token If provided in the initial request
+     * @param signature Given in the exit url
+     */
+    public void verifyExiturlSignature(String websitekey, String document,String status,String token,String signature){
+        byte[] providedSignature = DatatypeConverter.parseHexBinary(signature);
+
+        Mac mac;
+        try {
+            mac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secret = new SecretKeySpec(websitekey.getBytes(UTF_8), "HmacSHA256");
+            mac.init(secret);
+            String payload = document+"/"+status;
+            if(token != null) {
+                payload += "/"+token;
+            }
+            byte[] calculated = mac.doFinal(payload.getBytes(UTF_8));
+            boolean equal = true;
+            for (int i = 0; i < calculated.length; i++) {
+                equal = equal && (providedSignature[i] == calculated[i]);
+            }
+            System.out.println("Signature = " + equal);
+
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * For use when enhanced security on the API is required
      */
     public static long generateOtp(String salt, String privateKey, long counter) throws GeneralSecurityException {
