@@ -12,7 +12,6 @@
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20190722</version>
-            <type>bundle</type>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

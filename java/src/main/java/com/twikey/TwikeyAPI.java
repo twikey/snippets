@@ -1,5 +1,6 @@
 package com.twikey;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -340,7 +341,7 @@ public class TwikeyAPI {
 
     /**
      * Get updates about all mandates (new/updated/cancelled)
-     * @param invoiceCallback Callback for every change
+     * @param mandateCallback Callback for every change
      * @param since Optional reset (null = since the last call)
      * @throws IOException When a network issue happened
      * @throws UserException When there was an issue while retrieving the mandates (eg. invalid apikey)

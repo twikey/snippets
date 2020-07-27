@@ -69,10 +69,11 @@ public class Utils {
     /**
      * For use when enhanced security on the API is required
      */
-    public static long generateOtp(String salt, String privateKey, long counter) throws GeneralSecurityException {
+    public static long generateOtp(String salt, String privateKey) throws GeneralSecurityException {
         if (privateKey == null)
             throw new IllegalArgumentException("Invalid key");
 
+        long counter = (long) Math.floor(System.currentTimeMillis() / 30000);
         byte[] key = parseHexBinary(privateKey);
 
         if (salt != null) {
