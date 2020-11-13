@@ -1,9 +1,12 @@
 package com.twikey;
 
+import javax.crypto.Cipher;
 import javax.crypto.Mac;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static javax.xml.bind.DatatypeConverter.parseHexBinary;
@@ -15,7 +18,7 @@ public class Utils {
      * @param signatureHeader request.getHeader("X-SIGNATURE")
      * @param queryString request.getQueryString()
      */
-    public void verifyWebHookSignature(String apikey, String signatureHeader, String queryString){
+    public static void verifyWebHookSignature(String apikey, String signatureHeader, String queryString){
         byte[] providedSignature = DatatypeConverter.parseHexBinary(signatureHeader);
 
         Mac mac;
@@ -41,8 +44,9 @@ public class Utils {
      * @param status Outcome of the request
      * @param token If provided in the initial request
      * @param signature Given in the exit url
+     * @return whether or not the signature is valid
      */
-    public void verifyExiturlSignature(String websitekey, String document,String status,String token,String signature){
+    public static boolean verifyExiturlSignature(String websitekey, String document,String status,String token,String signature){
         byte[] providedSignature = DatatypeConverter.parseHexBinary(signature);
 
         Mac mac;
@@ -59,10 +63,27 @@ public class Utils {
             for (int i = 0; i < calculated.length; i++) {
                 equal = equal && (providedSignature[i] == calculated[i]);
             }
-            System.out.println("Signature = " + equal);
-
+            return equal;
         } catch (GeneralSecurityException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @param websitekey Provided in Settings > Website
+     * @param document Mandatenumber or other
+     * @param encryptedAccount encrypted account info
+     */
+    public static String decryptAccountInformation(String websitekey, String document,String encryptedAccount) {
+        String key = document+websitekey;
+        try {
+            byte[] keyBytes = MessageDigest.getInstance("MD5").digest(key.getBytes(UTF_8));
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(keyBytes, "AES"),new IvParameterSpec(keyBytes));
+            byte[] val = cipher.doFinal(DatatypeConverter.parseHexBinary(encryptedAccount));
+            return new String(val,UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("Exception decrypting : " + encryptedAccount, e);
         }
     }
 
