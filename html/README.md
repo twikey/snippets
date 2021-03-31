@@ -1,2 +1,4 @@
+You can use this snippet of code to paste on your website. 
+This way your customers can very easely pay their invoice.
 
-![Preview](https://twikey.github.io/snippets/gemeente.png)
+![Preview](./gemeente.png)

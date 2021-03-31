@@ -104,10 +104,6 @@ paths:
           * Updating a CRM system to take appropriate actions (eg. call the customer on cancel..)
           * Integrate the info in an ERP system to create the correct SDD files (in case of mandates)
 
-        If your system is out of sync or the full mandate database needs to be refreshed an optional "X-RESET" header
-        can be passed. The format can be a timestamp like "2015-08-20T13:02:03Z" or a specific MandateNumber.
-        After that you will receive (all) mandate updates since that time again.
-
         In order too avoid polling, a hook can be setup to notify the client when new information is available.
         This hook can be configured in the settings > erp section.
 
@@ -999,9 +995,6 @@ paths:
           - Transactions
         summary: Transaction feed
         description: Retrieve feed of updated transactions.
-          If your system is out of sync or the full payment database needs to be refreshed an optional "X-RESET" header
-          can be passed. The format can be a timestamp like "2015-08-20T13:02:03Z".
-          After that you will receive (all) payment updates since that time again.
         operationId: getCreditorTransactions
         consumes:
           - application/x-www-form-urlencoded
@@ -1283,9 +1276,6 @@ paths:
       summary: Collection Status
       description: Retrieve all payments obtained so far from collecting agent per batch (note that payments retrieved via this call
         won't be visible anymore via the Transaction feed).
-        If your system is out of sync or the full payment database needs to be refreshed an optional "X-RESET" header
-        can be passed. The format can be a timestamp like "2015-08-20T13:02:03Z".
-        After that you will receive (all) payment updates since that time again.
       operationId: getCreditorPayment
       security:
         - session_key : []

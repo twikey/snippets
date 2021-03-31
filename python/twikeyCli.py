@@ -70,43 +70,27 @@ class Twikey(cmd.Cmd):
             req = urllib2.Request(self.baseUrl+"/mandate?chunkSize=40")
             req.add_header("Authorization",self.authToken)
             req.add_header("Accept",self.mimeType)
-            if _type == 'today':
-                print "Updates since last today"
-                req.add_header("RESET",datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0).isoformat())
-            elif _type != '':
-                print "Mandate : %s" % _type
-                req.add_header("MANDATE",_type)
-            else:
-                print "Mandate since last update"
             response = urllib2.urlopen(req)
             resp = response.read()
             mandates = json.loads(resp)
 
             print json.dumps(mandates, sort_keys=True,indent=4, separators=(',', ': '))
 
-    def do_billing(self,_type):
-        """Return the billing entries
+    def do_transactions(self,_type):
+        """Handle the transaction updates
         """
         if self.authToken:
-            req = urllib2.Request(self.baseUrl+"/billing?chunkSize=40")
+            req = urllib2.Request(self.baseUrl+"/transaction?chunkSize=40")
             req.add_header("Authorization",self.authToken)
             req.add_header("Accept",self.mimeType)
-            if _type == 'today':
-                print "Updates since last today"
-                req.add_header("RESET",datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0).isoformat())
-            elif _type != '':
-                print "Mandate : %s" % _type
-                req.add_header("MANDATE",_type)
-            else:
-                print "Mandate since last update"
             response = urllib2.urlopen(req)
             resp = response.read()
             mandates = json.loads(resp)
 
             print json.dumps(mandates, sort_keys=True,indent=4, separators=(',', ': '))
 
-    def do_bill(self,args):
-        """Add a billing entry : <mndtId> <amount> <message>
+    def do_newtransaction(self,args):
+        """Add a Transaction : <mndtId> <amount> <message>
         """
         items = args.split()
         if self.authToken:
@@ -130,50 +114,6 @@ class Twikey(cmd.Cmd):
             response = urllib2.urlopen(req)
             print response.read()
 
-    def do_payment(self,args):
-        """Get payment : <id>
-        """
-        items = args.split()
-        if self.authToken:
-            params = 'detail=1'
-            if len(items) > 0:
-                params = urllib.urlencode({'id':items[0]})
-            print params
-            req = urllib2.Request(self.baseUrl+"/payment?"+params)
-            req.add_header("Authorization",self.authToken)
-            req.add_header("Accept",self.mimeType)
-            response = urllib2.urlopen(req)
-            print response.read()
-
-    def do_upload(self,file):
-        """Upload contracts <file>
-        """
-        if self.authToken and file:
-            with open (file, "r") as myfile:
-                data=myfile.read()
-            req = urllib2.Request(self.baseUrl+"/mandate", data)
-            req.add_header("Authorization",self.authToken)
-            req.add_header("Accept",self.mimeType)
-            print "Uploaded mandate"
-            response = urllib2.urlopen(req)
-            resp = response.read()
-            print resp
-            # print response.info()
-
-    def do_pdf(self,args):
-        """Return the mandate pdf: <creditorId> <mndtId>
-        """
-        items = args.split()
-        params = urllib.urlencode({'creditorId':items[0],'mndtId':items[1]})
-        if self.authToken:
-            req = urllib2.Request(self.baseUrl+"/mandate/pdf?"+params)
-            req.add_header("Authorization",self.authToken)
-            req.add_header("Accept",self.mimeType)
-            print "Mandate pdf retrieved"
-            response = urllib2.urlopen(req)
-            #resp = response.read()
-            print response.info()
-
     def do_action(self,args):
         """Action mandate: <action> <creditorId> <mndt> <rsn>
         """
@@ -186,22 +126,6 @@ class Twikey(cmd.Cmd):
             response = urllib2.urlopen(req)
             resp = response.read()
             print resp
-
-    def do_token(self,args):
-        """Get bank access token: <creditorId>
-        """
-        params = urllib.urlencode({'creditorId':args})
-        if self.authToken:
-            req = urllib2.Request(self.baseUrl+"/logintoken",params)
-            req.add_header("Authorization",self.authToken)
-            req.add_header("Accept",self.mimeType)
-            response = urllib2.urlopen(req)
-            resp = response.read()
-            auth = json.loads(resp)
-            if 'token' in auth:
-                print 'https://www.twikey.com/p/login/token/test/'+auth['token']
-            else:
-                print resp
 
     def do_quit(self,args):
         return "stop"

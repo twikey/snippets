@@ -269,7 +269,6 @@ func handleCommand(client *http.Client, baseUrl string,chunksize string, cmd str
 		req.Header.Add("Accept-Language", lang)
 		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Add("Authorization", authToken)
-		req.Header.Add("RESET", t.Format(time.RFC3339))
 		req.Header.Add("Accept", mimeType)
 
 		res, _ := client.Do(req)
@@ -625,7 +624,6 @@ func handleCommand(client *http.Client, baseUrl string,chunksize string, cmd str
 		req, _ := http.NewRequest("GET", baseUrl + "/payment?detail=true", nil)
 		req.Header.Add("Accept-Language", lang)
 		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Add("RESET", t.Format(time.RFC3339))
 		req.Header.Add("Authorization", authToken)
 		req.Header.Add("Accept", mimeType)
 

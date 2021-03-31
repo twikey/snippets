@@ -224,7 +224,7 @@ class Twikey {
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, sprintf("%s/creditor/payment?%s", $this->endpoint, $payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: $this->auth"/*, "X-RESET: true"*/,"Accept-Language: $this->lang"));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: $this->auth","Accept-Language: $this->lang"));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         self::setCurlDefaults();
         $server_output = curl_exec($ch);
@@ -251,7 +251,7 @@ class Twikey {
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, sprintf("%s/creditor/transaction/detail?%s", $this->endpoint, $payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: $this->auth"/*, "X-RESET: true"*/,"Accept-Language: $this->lang"));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: $this->auth","Accept-Language: $this->lang"));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         self::setCurlDefaults($ch);
 
@@ -270,7 +270,7 @@ class Twikey {
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, sprintf("%s/creditor/transaction", $this->endpoint));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: $this->auth"/*, "X-RESET: true"*/,"Accept-Language: $this->lang"));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: $this->auth","Accept-Language: $this->lang"));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         self::setCurlDefaults($ch);
 
