@@ -1,6 +1,6 @@
 <?php
 $provided_signature = $_SERVER['HTTP_X_SIGNATURE'];
-$message = $_SERVER['QUERY_STRING'];
+$message = urldecode($_SERVER['QUERY_STRING']);
 
 $apiKey = "C0EEE955DD2E2BDE3D42AB2B7EAF668C92899E1B";
 $calculated = strtoupper(hash_hmac('sha256', $message, $apiKey));
