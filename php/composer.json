@@ -1,0 +1,29 @@
+{
+    "name": "twikey/api",
+    "description": "Humble php client to interface with the Twikey api",
+    "type": "library",
+    "require": {
+        "php": "^7.2.5 || ^8.0",
+        "ext-json": "*",
+        "psr/http-client": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "guzzlehttp/guzzle": "^7.3"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Twikey\\Api\\": "src/"
+        }
+    },
+    "scripts": {
+        "test": "php vendor/phpunit/phpunit/phpunit"
+    },
+    "authors": [
+        {
+            "name": "Koen Serry",
+            "email": "482723+koen-serry@users.noreply.github.com"
+        }
+    ]
+}
