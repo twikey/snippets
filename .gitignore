@@ -2,3 +2,4 @@
 /php/composer.lock
 /php/.phpunit.result.cache
 /php/vendor
+/.vscode/
