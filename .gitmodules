@@ -7,3 +7,6 @@
 [submodule "twikey-api-java"]
 	path = twikey-api-java
 	url = git@github.com:twikey/twikey-api-go.git
+[submodule "twikey-api-python"]
+	path = twikey-api-python
+	url = git@github.com:twikey/twikey-api-python.git
