@@ -1,9 +1,9 @@
 [submodule "twikey-api-php"]
 	path = twikey-api-php
-	url = https://github.com/twikey/twikey-api-php
+	url = git@github.com:twikey/twikey-api-php.git
 [submodule "twikey-api-go"]
 	path = twikey-api-go
-	url = https://github.com/twikey/twikey-api-go
+	url = git@github.com:twikey/twikey-api-go.git
 [submodule "twikey-api-java"]
 	path = twikey-api-java
-	url = https://github.com/twikey/twikey-api-java
+	url = git@github.com:twikey/twikey-api-go.git
