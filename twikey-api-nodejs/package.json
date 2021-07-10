@@ -1,0 +1,52 @@
+{
+  "name": "@twikey/twikey-api-node",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Official Twikey API client for Node",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/twikey/twikey-api-node.git"
+  },
+  "keywords": [
+    "twikey",
+    "payment",
+    "api",
+    "client",
+    "payments",
+    "gateway"
+  ],
+  "main": "twikey-api.js",
+  "module": "dist/mollie.esm.js",
+  "jsnext:main": "dist/mollie.esm.js",
+  "types": "dist/types/src/types.d.ts",
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "scripts": {
+    "prepublish": "yarn build",
+    "commit": "git-cz",
+    "prepush": "yarn test",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:unit:cov": "jest ./tests/unit --coverage",
+    "build": "yarn build:library && yarn build:declarations",
+    "build:library": "rollup --config rollup.config.js",
+    "build:declarations": "tsc --project tsconfig-declarations.json",
+    "lint:prettier": "prettier --write \"{src,tests,examples}/**/*.{js,ts}\"",
+    "lint:eslint": "eslint --ext .ts,.js src/",
+    "lint:eslint:fix": "eslint --ext .ts,.js --fix src/",
+    "lint": "yarn lint:eslint:fix && yarn lint:prettier"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.0"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "bugs": {
+    "url": "https://github.com/twikey/twikey-api-node/issues"
+  },
+  "homepage": "https://github.com/twikey/twikey-api-node#readme",
+  "author": ""
+}

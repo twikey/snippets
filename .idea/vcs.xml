@@ -2,5 +2,9 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/twikey-api-go" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/twikey-api-java" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/twikey-api-php" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/twikey-api-python" vcs="Git" />
   </component>
 </project>
