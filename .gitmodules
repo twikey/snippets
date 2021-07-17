@@ -10,3 +10,6 @@
 [submodule "twikey-api-python"]
 	path = twikey-api-python
 	url = git@github.com:twikey/twikey-api-python.git
+[submodule "twikey-api-dotnet"]
+	path = twikey-api-dotnet
+	url = git@github.com:twikey/twikey-api-dotnet.git
