@@ -14,7 +14,7 @@ module.exports = {
             })
             .then(errorHandler)
             .then(res => res.json());
-    }
+    },
     sign: function (auth, entity) {
         var params = new URLSearchParams();
         for (var key in entity)
@@ -49,7 +49,7 @@ module.exports = {
             body: params
         })
             .then(errorHandler);
-    }
+    },
     feed: function(auth,reset){
         let headers = {
             "User-Agent": USER_AGENT,
@@ -66,5 +66,4 @@ module.exports = {
             .then(errorHandler)
             .then(res => res.json());
     }
-
 }
