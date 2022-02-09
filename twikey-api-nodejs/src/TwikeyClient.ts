@@ -108,22 +108,17 @@ class TwikeyClient {
 
     protected getSessionToken() : string {
         if ((Date.now() - this.lastLogin) > MAX_SESSION_AGE) {
-
-
-            return await fetch(this.endpoint + '/creditor',{
+            var params = new URLSearchParams();
+            params.append('apiToken', this.apiKey);
+            if (this.privateKey) {
+                params.append('otp', this.generateOtp());
+            }
+            return await fetch(this.endpoint + '/creditor', {
                 headers: {
                     "User-Agent": this.userAgent,
                     "Content-Type": "application/x-www-form-urlencoded"
                 },
                 method: 'POST',
-                formData(): Promise<FormData> {
-                    var params = new URLSearchParams();
-                    params.append('apiToken', this.apiKey);
-                    if (this.privateKey) {
-                        params.append('otp', this.generateOtp());
-                    }
-
-                }
                 body: params
             }).then(function (res) {
                 var auth = res.headers.get('authorization');
@@ -134,37 +129,5 @@ class TwikeyClient {
                 throw res.headers.get('apierror') || 'Twikey login failed';
             });
         }
-        URL myurl = new URL(endpoint);
-        HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("User-Agent", userAgent);
-        con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        con.setDoOutput(true);
-        con.setDoInput(true);
-
-        try (DataOutputStream output = new DataOutputStream(con.getOutputStream())) {
-        if (privateKey != null) {
-        long otp = generateOtp(SALT_OWN, privateKey);
-        output.writeBytes(String.format("apiToken=%s&otp=%d", apiKey, otp));
-    } else {
-        output.writeBytes(String.format("apiToken=%s", apiKey));
-    }
-    output.flush();
-    } catch (GeneralSecurityException e) {
-        throw new IOException(e);
-    }
-
-    sessionToken = con.getHeaderField("Authorization");
-    con.disconnect();
-
-    if (sessionToken != null) {
-        lastLogin = System.currentTimeMillis();
-    } else {
-        lastLogin = 0;
-        throw new UnauthenticatedException();
-    }
-    }
-
-    return sessionToken;
     }
 }

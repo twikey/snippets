@@ -32,7 +32,7 @@ module.exports = {
             .then(errorHandler)
             .then(res => res.json());
     },
-    mandateUpdate: function(auth,items){
+    update: function(auth,items){
         if(!items || !items.mndtId)
             throw "mndtId is missing";
 
@@ -50,20 +50,30 @@ module.exports = {
         })
             .then(errorHandler);
     },
-    feed: function(auth,reset){
+    feed: function(auth){
         let headers = {
             "User-Agent": USER_AGENT,
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": auth
         };
-        if(reset){
-            headers['X-RESET'] = reset;
-        }
         return fetch(url+'/creditor/mandate',{
             method: 'GET',
             headers: headers
         })
             .then(errorHandler)
             .then(res => res.json());
+    },
+    detail: function(auth,mndtId){
+        let headers = {
+            "User-Agent": USER_AGENT,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": auth
+        };
+        return fetch(url+'/creditor/mandate/detail?mndtId='+mndtId,{
+            method: 'GET',
+            headers: headers
+        })
+        .then(errorHandler)
+        .then(res => res.json());
     }
 }

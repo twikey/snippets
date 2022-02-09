@@ -3,7 +3,6 @@ const { URLSearchParams } = require('url');
 const https = require('https');
 
 module.exports = function(key,options){
-  options = options || 
   let USER_AGENT = options.userAgent || DEFAULT_USER_AGENT;
   
   var fetch = require('node-fetch'),
