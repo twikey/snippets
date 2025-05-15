@@ -16,3 +16,6 @@
 [submodule "twikey-api-node"]
 	path = twikey-api-node
 	url = git@github.com:twikey/twikey-api-node.git
+[submodule "twikey-api-ruby"]
+	path = twikey-api-ruby
+	url = git@github.com:twikey/twikey-api-ruby.git
